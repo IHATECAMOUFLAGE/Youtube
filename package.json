@@ -2,7 +2,18 @@
   "name": "youtube-clone-backend",
   "version": "1.0.0",
   "type": "module",
+  "main": "public/index.html",
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "node-fetch": "3.3.2"
+  },
+  "vercel": {
+    "functions": {
+      "api/*.js": {
+        "runtime": "nodejs18.x"
+      }
+    }
   }
 }
