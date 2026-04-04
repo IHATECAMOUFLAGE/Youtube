@@ -851,7 +851,7 @@
       homeEmpty.style.display = "none";
       resultsGrid.innerHTML = '<div class="loader"></div>';
       
-      fetch(API_BASE + "?query=" + encodeURIComponent(query))
+      fetch(API_BASE + "?query=" + query)
         .then(function(res) {
           return res.json();
         })
