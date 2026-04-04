@@ -201,7 +201,7 @@ els.sidebarItems.forEach(function (item) {
   });
 });
 els.notificationBtn.addEventListener("click", function () {
-  showToast("You can deploy this site yourself: https://github.com/IHATECAMOUFLAGE/Youtube");
+  showToast("You can deploy this site yourself: https://github.com/IHATECAMOUFLAGE/Youtube\n\nJoin https://discord.gg/ujGFjYcuWn for more links and websites like this!");
 });
 els.accountBtn.addEventListener("click", function () {
   showToast("Account options will be available soon.");
