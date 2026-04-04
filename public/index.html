@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <link rel="icon" type="image/x-icon" href="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=256">
   <meta charset="UTF-8">
   <title>YouTube</title>
+  <link rel="icon" href="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=256" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
@@ -476,9 +476,10 @@
           <g viewBox="0 0 90 20" preserveAspectRatio="none">
             <g>
               <path d="M27.9704 3.12324C27.6411 1.89323 26.6745 0.926623 25.4445 0.597366C23.2173 2.24288e-07 14.2827 0 14.2827 0C14.2827 0 5.34807 2.24288e-07 3.12088 0.597366C1.89323 0.926623 0.924271 1.89323 0.595014 3.12324C-2.8036e-07 5.35042 0 10 0 10C0 10 -1.57361e-07 14.6496 0.597364 16.8768C0.926621 18.1068 1.89323 19.0734 3.12324 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6769 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5677 5.35042 27.9704 3.12324Z" fill="#FF0000"></path>
+              <path d="M11.4253 14.2854L18.8477 10.0004L11.4253 5.71533V14.2854Z" fill="white"></path>
             </g>
             <g>
-              Youtube
+              <path>Youtube</path>
             </g>
           </g>
         </svg>
@@ -609,7 +610,31 @@
   <div id="toast" class="toast">Notification</div>
 
   <script>
-    const state = {
+    var searchInput = document.getElementById("searchInput");
+    var autocomplete = document.getElementById("autocomplete");
+    var menuToggle = document.getElementById("menuToggle");
+    var backdrop = document.getElementById("backdrop");
+    var sidebar = document.getElementById("sidebar");
+    var searchButton = document.getElementById("searchButton");
+    var homeSection = document.getElementById("homeSection");
+    var homeEmpty = document.getElementById("homeEmpty");
+    var resultsGrid = document.getElementById("resultsGrid");
+    var watchLayout = document.getElementById("watchLayout");
+    var mainPlayer = document.getElementById("mainPlayer");
+    var watchTitle = document.getElementById("watchTitle");
+    var watchChannelName = document.getElementById("watchChannelName");
+    var watchViews = document.getElementById("watchViews");
+    var watchDescription = document.getElementById("watchDescription");
+    var relatedList = document.getElementById("relatedList");
+    var embedYoutube = document.getElementById("embedYoutube");
+    var embedTheta = document.getElementById("embedTheta");
+    var currentResults = [];
+    var currentVideoIndex = -1;
+    var embedMode = "youtube";
+    var selectedIndex = -1;
+    var API_BASE = "/api/search";
+
+    var state = {
       currentTab: 'home',
       searchQuery: '',
       currentVideo: null,
@@ -618,7 +643,7 @@
       subscriptions: ['TechDaily', 'Music Vevo', 'Gaming Hub', 'Daily Vlogs']
     };
 
-    const els = {
+    var els = {
       searchInput: document.getElementById("searchInput"),
       autocomplete: document.getElementById("autocomplete"),
       backdrop: document.getElementById("backdrop"),
@@ -638,17 +663,299 @@
       likeText: document.getElementById("likeText")
     };
 
-    const API_BASE = "/api/search";
+    function isMobile() {
+      return window.innerWidth <= 960;
+    }
+
+    function applyResponsiveSidebar() {
+      var body = document.body;
+      if (isMobile()) {
+        body.classList.remove("sidebar-full");
+        body.classList.remove("sidebar-mini");
+        body.classList.remove("mobile-sidebar-open");
+      } else {
+        body.classList.remove("mobile-sidebar-open");
+        if (window.innerWidth <= 1200) {
+          body.classList.remove("sidebar-full");
+          body.classList.add("sidebar-mini");
+        } else {
+          if (!body.classList.contains("sidebar-full") && !body.classList.contains("sidebar-mini")) {
+            body.classList.add("sidebar-full");
+          }
+        }
+      }
+    }
+
+    applyResponsiveSidebar();
+    window.addEventListener("resize", applyResponsiveSidebar);
+
+    menuToggle.addEventListener("click", function() {
+      var body = document.body;
+      if (isMobile()) {
+        var isOpen = body.classList.toggle("mobile-sidebar-open");
+        if (!isOpen) {
+          body.classList.remove("mobile-sidebar-open");
+        }
+        return;
+      }
+      if (body.classList.contains("sidebar-full")) {
+        body.classList.remove("sidebar-full");
+        body.classList.add("sidebar-mini");
+      } else if (body.classList.contains("sidebar-mini")) {
+        body.classList.remove("sidebar-mini");
+        body.classList.add("sidebar-full");
+      } else {
+        body.classList.add("sidebar-full");
+      }
+    });
+
+    backdrop.addEventListener("click", function() {
+      document.body.classList.remove("mobile-sidebar-open");
+    });
+
+    sidebar.addEventListener("click", function(e) {
+      if (isMobile()) {
+        var item = e.target.closest(".sidebar-item");
+        if (item) {
+          document.body.classList.remove("mobile-sidebar-open");
+        }
+      }
+    });
+
+    function fetchSuggestions(query) {
+      var url = "https://api.datamuse.com/sug?s=" + encodeURIComponent(query);
+      return fetch(url)
+        .then(function(res) {
+          return res.json();
+        })
+        .then(function(data) {
+          return data.map(function(item) {
+            return item.word;
+          });
+        })
+        .catch(function() {
+          return [];
+        });
+    }
+
+    function updateAutocomplete() {
+      var query = searchInput.value.trim();
+      autocomplete.innerHTML = "";
+      selectedIndex = -1;
+      if (!query) {
+        autocomplete.style.display = "none";
+        return;
+      }
+      fetchSuggestions(query).then(function(suggestions) {
+        if (!suggestions.length) {
+          autocomplete.style.display = "none";
+          return;
+        }
+        suggestions.forEach(function(text) {
+          var item = document.createElement("div");
+          item.className = "autocomplete-item";
+          item.innerHTML = '<span class="material-symbols-rounded">search</span>' + text;
+          item.addEventListener("click", function() {
+            searchInput.value = text;
+            autocomplete.style.display = "none";
+            performSearch(text);
+          });
+          autocomplete.appendChild(item);
+        });
+        autocomplete.style.display = "block";
+      });
+    }
+
+    searchInput.addEventListener("input", updateAutocomplete);
+    searchInput.addEventListener("keydown", function(e) {
+      var items = autocomplete.querySelectorAll(".autocomplete-item");
+      if (!items.length) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      } else if (e.key === "Enter") {
+        if (selectedIndex >= 0) {
+          e.preventDefault();
+          searchInput.value = items[selectedIndex].innerText.trim();
+          autocomplete.style.display = "none";
+          performSearch(items[selectedIndex].innerText.trim());
+        } else {
+          performSearch(searchInput.value);
+        }
+        return;
+      } else if (e.key === "Escape") {
+        autocomplete.style.display = "none";
+        return;
+      } else {
+        return;
+      }
+      items.forEach(function(item) {
+        item.classList.remove("active");
+      });
+      items[selectedIndex].classList.add("active");
+    });
+
+    document.addEventListener("click", function(e) {
+      var clickedInside = autocomplete.contains(e.target) || searchInput.contains(e.target);
+      if (!clickedInside) {
+        autocomplete.style.display = "none";
+      }
+    });
+
+    searchButton.addEventListener("click", function() {
+      performSearch(searchInput.value);
+    });
+
+    function renderGrid(list) {
+      resultsGrid.innerHTML = "";
+      if (!list.length) {
+        resultsGrid.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">search_off</span><p>No videos found.</p></div>';
+        return;
+      }
+      list.forEach(function(video, index) {
+        var card = document.createElement("article");
+        card.className = "video-card";
+        var thumbUrl = video.thumbnail || "";
+        var title = video.title || "";
+        var channel = video.channel || "";
+        var views = video.views || "";
+        var duration = video.duration || "";
+        card.innerHTML =
+          '<div class="thumbnail">' +
+          '<img src="' + thumbUrl + '" onerror="this.src=\'https://via.placeholder.com/320x180\'">' +
+          (duration ? '<div class="duration-badge">'+duration+'</div>' : '') +
+          "</div>" +
+          '<div class="video-info">' +
+          '<div class="video-avatar"></div>' +
+          '<div class="video-meta">' +
+          '<h3 class="video-title">' + title + "</h3>" +
+          '<p class="video-channel">' + channel + "</p>" +
+          '<p class="video-stats">' + views + (duration ? " • " + duration : "") + "</p>" +
+          "</div>" +
+          "</div>";
+        card.addEventListener("click", function() {
+          openWatch(index);
+        });
+        resultsGrid.appendChild(card);
+      });
+    }
+
+    function performSearch(query) {
+      if (!query) query = "";
+      state.searchQuery = query;
+      searchInput.value = query;
+      
+      homeEmpty.style.display = "none";
+      resultsGrid.innerHTML = '<div class="loader"></div>';
+      
+      fetch(API_BASE + "?query=" + encodeURIComponent(query))
+        .then(function(res) {
+          return res.json();
+        })
+        .then(function(data) {
+          currentResults = data.results || [];
+          state.currentTab = 'search';
+          els.mainSection.classList.remove("hidden");
+          els.shortsSection.classList.add("hidden");
+          els.watchLayout.classList.add("hidden");
+          els.pageTitle.style.display = "none";
+          
+          renderGrid(currentResults);
+        })
+        .catch(function() {
+          resultsGrid.innerHTML = '<div class="empty-state">Error loading results.</div>';
+        });
+    }
+
+    function openWatch(index) {
+      if (!currentResults.length || !currentResults[index]) return;
+      currentVideoIndex = index;
+      var video = currentResults[index];
+      var id = video.id;
+      var title = video.title || "";
+      var channel = video.channel || "YouTube";
+      var views = video.views || "";
+      
+      state.currentVideo = video;
+      saveToHistory(video);
+
+      watchTitle.textContent = title;
+      watchChannelName.textContent = channel;
+      watchViews.textContent = views;
+      watchDescription.textContent = "Playing: " + title + "\nChannel: " + channel;
+      setEmbedMode(embedMode, id);
+      renderRelated(index);
+      
+      els.mainSection.classList.add("hidden");
+      els.shortsSection.classList.add("hidden");
+      els.watchLayout.classList.remove("hidden");
+      els.watchLayout.classList.add("active");
+      
+      updateLikeButtonState();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderRelated(activeIndex) {
+      relatedList.innerHTML = "";
+      currentResults.forEach(function(video, index) {
+        if (index === activeIndex) return;
+        var item = document.createElement("div");
+        item.className = "related-item";
+        var thumbUrl = video.thumbnail || "";
+        var title = video.title || "";
+        var channel = video.channel || "";
+        var views = video.views || "";
+        var duration = video.duration || "";
+        item.innerHTML =
+          '<div class="related-thumb">' +
+          '<img src="' + thumbUrl + '" onerror="this.src=\'https://via.placeholder.com/168x94\'">' +
+          "</div>" +
+          '<div class="related-info">' +
+          '<div class="related-title">' + title + "</div>" +
+          '<div class="related-channel">' + channel + "</div>" +
+          '<div class="related-stats">' + views + (duration ? " • " + duration : "") + "</div>" +
+          "</div>";
+        item.addEventListener("click", function() {
+          openWatch(index);
+        });
+        relatedList.appendChild(item);
+      });
+    }
+
+    function setEmbedMode(mode, id) {
+      embedMode = mode;
+      embedYoutube.classList.remove("active");
+      embedTheta.classList.remove("active");
+      if (mode === "youtube") {
+        embedYoutube.classList.add("active");
+        mainPlayer.src = "https://www.youtube.com/embed/" + id + "?autoplay=1&rel=0&modestbranding=1";
+      } else {
+        embedTheta.classList.add("active");
+        mainPlayer.src = "https://thetacloud.org/yt/#" + id;
+      }
+    }
+
+    embedYoutube.addEventListener("click", function() {
+      if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
+      setEmbedMode("youtube", currentResults[currentVideoIndex].id);
+    });
+    embedTheta.addEventListener("click", function() {
+      if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
+      setEmbedMode("thetacloud", currentResults[currentVideoIndex].id);
+    });
 
     function saveToHistory(video) {
-      state.history = state.history.filter(v => v.id !== video.id);
+      state.history = state.history.filter(function(v) { return v.id !== video.id; });
       state.history.unshift(video);
       if(state.history.length > 50) state.history.pop();
       localStorage.setItem('yt_history', JSON.stringify(state.history));
     }
 
     function toggleLike(video) {
-      const index = state.likedVideos.findIndex(v => v.id === video.id);
+      var index = state.likedVideos.findIndex(function(v) { return v.id === video.id; });
       if (index === -1) {
         state.likedVideos.unshift(video);
         showToast("Added to Liked videos");
@@ -661,12 +968,12 @@
     }
 
     function isLiked(videoId) {
-      return state.likedVideos.some(v => v.id === videoId);
+      return state.likedVideos.some(function(v) { return v.id === videoId; });
     }
 
     function updateLikeButtonState() {
       if (!state.currentVideo) return;
-      const liked = isLiked(state.currentVideo.id);
+      var liked = isLiked(state.currentVideo.id);
       if (liked) {
         els.likeBtn.classList.add("liked");
         els.likeText.textContent = "Liked";
@@ -679,24 +986,23 @@
     function showToast(msg) {
       els.toast.textContent = msg;
       els.toast.classList.add("show");
-      setTimeout(() => els.toast.classList.remove("show"), 3000);
+      setTimeout(function() { els.toast.classList.remove("show"); }, 3000);
     }
 
-    function switchTab(tabName, query = "") {
+    function switchTab(tabName, query) {
       state.currentTab = tabName;
-      
       els.mainSection.classList.add("hidden");
       els.shortsSection.classList.add("hidden");
       els.watchLayout.classList.add("hidden");
       els.watchLayout.classList.remove("active");
-      
-      els.sidebarItems.forEach(item => {
+
+      els.sidebarItems.forEach(function(item) {
         if (item.dataset.page === tabName) item.classList.add("active");
         else item.classList.remove("active");
       });
 
       if (tabName === 'home' && !query) {
-        els.chips.forEach(c => c.classList.remove("active"));
+        els.chips.forEach(function(c) { c.classList.remove("active"); });
         els.chips[0].classList.add("active");
       }
 
@@ -717,8 +1023,8 @@
         els.mainSection.classList.remove("hidden");
         els.pageTitle.style.display = 'block';
         els.pageTitle.textContent = "Library";
-        const librarySet = new Set([...state.history, ...state.likedVideos].map(v => JSON.stringify(v)));
-        const libraryList = Array.from(librarySet).map(s => JSON.parse(s));
+        var librarySet = new Set([].concat(state.history, state.likedVideos).map(function(v) { return JSON.stringify(v); }));
+        var libraryList = Array.from(librarySet).map(function(s) { return JSON.parse(s); });
         renderStorageGrid(libraryList);
       } else if (tabName === 'subscriptions') {
         els.mainSection.classList.remove("hidden");
@@ -732,238 +1038,76 @@
       }
     }
 
-    function renderGrid(videos) {
-      els.resultsGrid.innerHTML = "";
-      if (!videos || videos.length === 0) {
-        els.resultsGrid.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">search_off</span><p>No videos found.</p></div>';
-        return;
-      }
-
-      videos.forEach((video, index) => {
-        const title = video.title || "Untitled Video";
-        const channel = video.channel || "Unknown Channel";
-        const views = video.views || "0 views";
-        const duration = video.duration || "";
-        const thumb = video.thumbnail || "";
-        const id = video.id || index;
-
-        const card = document.createElement("article");
-        card.className = "video-card";
-        card.innerHTML = `
-          <div class="thumbnail">
-            <img src="${thumb}" onerror="this.src='https://via.placeholder.com/320x180?text=Video'">
-            ${duration ? `<div class="duration-badge">${duration}</div>` : ''}
-          </div>
-          <div class="video-info">
-            <div class="video-avatar"></div>
-            <div class="video-meta">
-              <h3 class="video-title">${title}</h3>
-              <p class="video-channel">${channel}</p>
-              <p class="video-stats">${views} ${duration ? '• ' + duration : ''}</p>
-            </div>
-          </div>
-        `;
-        card.addEventListener("click", () => openWatch(video));
-        els.resultsGrid.appendChild(card);
-      });
-    }
-
     function renderStorageGrid(videos) {
-      renderGrid(videos);
-    }
-
-    function renderShorts(videos) {
-      els.shortsGrid.innerHTML = "";
+      resultsGrid.innerHTML = "";
       if (!videos || videos.length === 0) {
-        els.shortsGrid.innerHTML = '<div class="empty-state">No shorts found.</div>';
+        resultsGrid.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">search_off</span><p>No videos found.</p></div>';
         return;
       }
-
-      videos.forEach(video => {
-        const card = document.createElement("article");
-        card.className = "shorts-card";
-        card.innerHTML = `
-          <div class="thumbnail">
-            <img src="${video.thumbnail}" onerror="this.src='https://via.placeholder.com/320x568?text=Shorts'">
-          </div>
-          <div class="video-meta">
-            <h3 class="video-title">${video.title}</h3>
-          </div>
-        `;
-        card.addEventListener("click", () => openWatch(video));
-        els.shortsGrid.appendChild(card);
+      videos.forEach(function(video, index) {
+        var card = document.createElement("article");
+        card.className = "video-card";
+        var thumbUrl = video.thumbnail || "";
+        var title = video.title || "";
+        var channel = video.channel || "";
+        var views = video.views || "";
+        var duration = video.duration || "";
+        card.innerHTML =
+          '<div class="thumbnail">' +
+          '<img src="' + thumbUrl + '" onerror="this.src=\'https://via.placeholder.com/320x180\'">' +
+          (duration ? '<div class="duration-badge">'+duration+'</div>' : '') +
+          "</div>" +
+          '<div class="video-info">' +
+          '<div class="video-avatar"></div>' +
+          '<div class="video-meta">' +
+          '<h3 class="video-title">' + title + "</h3>" +
+          '<p class="video-channel">' + channel + "</p>" +
+          '<p class="video-stats">' + views + (duration ? " • " + duration : "") + "</p>" +
+          "</div>" +
+          "</div>";
+        card.addEventListener("click", function() {
+          openVideoObject(video);
+        });
+        resultsGrid.appendChild(card);
       });
     }
 
-    function performSearch(query) {
-      state.searchQuery = query;
-      els.resultsGrid.innerHTML = '<div class="loader"></div>';
-      els.mainEmpty.style.display = "none";
-
-      const searchParam = query ? encodeURIComponent(query) : "";
-
-      fetch(API_BASE + "?query=" + searchParam)
-        .then(res => res.json())
-        .then(data => {
-          const videos = data.results || [];
-          if(state.currentTab === 'shorts') {
-            renderShorts(videos);
-          } else {
-            renderGrid(videos);
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          els.resultsGrid.innerHTML = '<div class="empty-state">Error loading results. Is the backend running?</div>';
-        });
+    function openVideoObject(video) {
+      currentResults = [video];
+      currentVideoIndex = 0;
+      openWatch(0);
     }
 
     function loadShorts() {
       performSearch("shorts");
     }
 
-    function openWatch(video) {
-      state.currentVideo = video;
-      
-      saveToHistory(video);
-
-      els.mainSection.classList.add("hidden");
-      els.shortsSection.classList.add("hidden");
-      els.watchLayout.classList.remove("hidden");
-      els.watchLayout.classList.add("active");
-
-      document.getElementById("watchTitle").textContent = video.title;
-      document.getElementById("watchChannelName").textContent = video.channel || "Channel Name";
-      document.getElementById("watchViews").textContent = video.views || "0 views";
-      document.getElementById("watchDescription").textContent = `Description for: ${video.title}\n\nThis is a simulated description.`;
-      
-      setEmbedMode("youtube", video.id);
-
-      updateLikeButtonState();
-
-      loadRelated(state.searchQuery || "related");
-      
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function loadRelated(query) {
-      fetch(API_BASE + "?query=" + encodeURIComponent(query))
-        .then(res => res.json())
-        .then(data => {
-          const videos = data.results || [];
-          const container = document.getElementById("relatedList");
-          container.innerHTML = "";
-          
-          videos.forEach(video => {
-            if(video.id === state.currentVideo.id) return;
-
-            const item = document.createElement("div");
-            item.className = "related-item";
-            item.innerHTML = `
-              <div class="related-thumb">
-                <img src="${video.thumbnail}" onerror="this.src='https://via.placeholder.com/168x94'">
-              </div>
-              <div class="related-info">
-                <div class="related-title">${video.title}</div>
-                <div class="related-channel">${video.channel}</div>
-                <div class="related-stats">${video.views}</div>
-              </div>
-            `;
-            item.addEventListener("click", () => openWatch(video));
-            container.appendChild(item);
-          });
-        });
-    }
-
-    function setEmbedMode(mode, id) {
-      const player = document.getElementById("mainPlayer");
-      const btnYt = document.getElementById("embedYoutube");
-      const btnTheta = document.getElementById("embedTheta");
-      
-      btnYt.classList.remove("active");
-      btnTheta.classList.remove("active");
-
-      if (mode === "youtube") {
-        btnYt.classList.add("active");
-        player.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
-      } else {
-        btnTheta.classList.add("active");
-        player.src = `https://thetacloud.org/yt/#${id}`;
-      }
-    }
-
-    els.searchButton.addEventListener("click", () => {
-      switchTab('search', els.searchInput.value);
-    });
-    els.searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") switchTab('search', els.searchInput.value);
+    els.likeBtn.addEventListener("click", function() {
+      if (state.currentVideo) toggleLike(state.currentVideo);
     });
 
-    els.chips.forEach(chip => {
-      chip.addEventListener("click", () => {
-        els.chips.forEach(c => c.classList.remove("active"));
+    els.homeLogo.addEventListener("click", function() {
+      switchTab('home');
+    });
+
+    els.chips.forEach(function(chip) {
+      chip.addEventListener("click", function() {
+        els.chips.forEach(function(c) { c.classList.remove("active"); });
         chip.classList.add("active");
-        
-        const query = chip.dataset.query;
-        els.searchInput.value = query;
-        switchTab('search', query);
+        var query = chip.dataset.query;
+        searchInput.value = query;
+        performSearch(query);
       });
     });
 
-    els.sidebarItems.forEach(item => {
-      item.addEventListener("click", () => {
-        const page = item.dataset.page;
+    els.sidebarItems.forEach(function(item) {
+      item.addEventListener("click", function() {
+        var page = item.dataset.page;
         if (page) switchTab(page);
       });
     });
 
-    els.homeLogo.addEventListener("click", () => switchTab('home'));
-
-    els.likeBtn.addEventListener("click", () => {
-      if (state.currentVideo) toggleLike(state.currentVideo);
-    });
-
-    document.getElementById("embedYoutube").addEventListener("click", () => {
-      if (state.currentVideo) setEmbedMode("youtube", state.currentVideo.id);
-    });
-    document.getElementById("embedTheta").addEventListener("click", () => {
-      if (state.currentVideo) setEmbedMode("thetacloud", state.currentVideo.id);
-    });
-
-    els.backdrop.addEventListener("click", () => {
-      document.body.classList.remove("mobile-sidebar-open");
-    });
-
-    function updateAutocomplete() {
-      const query = els.searchInput.value.trim();
-      els.autocomplete.innerHTML = "";
-      if (!query) { els.autocomplete.style.display = "none"; return; }
-
-      fetch("https://api.datamuse.com/sug?s=" + encodeURIComponent(query))
-        .then(res => res.json())
-        .then(data => {
-          data.forEach(item => {
-            const div = document.createElement("div");
-            div.className = "autocomplete-item";
-            div.innerHTML = `<span class="material-symbols-rounded">search</span> ${item.word}`;
-            div.addEventListener("click", () => {
-              els.searchInput.value = item.word;
-              els.autocomplete.style.display = "none";
-              switchTab('search', item.word);
-            });
-            els.autocomplete.appendChild(div);
-          });
-          els.autocomplete.style.display = "block";
-        });
-    }
-    els.searchInput.addEventListener("input", updateAutocomplete);
-    document.addEventListener("click", (e) => {
-      if (!els.autocomplete.contains(e.target) && e.target !== els.searchInput) {
-        els.autocomplete.style.display = "none";
-      }
-    });
-
-    window.addEventListener("load", () => {
+    window.addEventListener("load", function() {
       switchTab('home');
     });
   </script>
