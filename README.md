@@ -9,8 +9,8 @@ You are allowed to:
 
 - Download it  
 - Run it  
-- Host it for yourself  
-- Modify it **privately** *This means that you cannot share this said **private** version with anyone*
+- Host it for yourself 
+- Modify it **privately** *This means that you cannot share this said **private** version with anyone without explicit permission and credit by the author/creator*
 
 You are **NOT allowed** to:
 
