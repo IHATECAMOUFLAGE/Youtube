@@ -73,7 +73,10 @@ body {
   width: auto;
 }
 .icon-btn,
-.mic-btn {
+.mic-btn,
+.menu-toggle-btn,
+.account-btn,
+.notification-btn {
   border: none;
   background: transparent;
   color: var(--text-primary);
@@ -86,15 +89,24 @@ body {
   cursor: pointer;
 }
 .icon-btn:hover,
-.mic-btn:hover {
+.mic-btn:hover,
+.menu-toggle-btn:hover,
+.account-btn:hover,
+.notification-btn:hover {
   background-color: #272727;
 }
-.avatar {
-  width: 32px;
-  height: 32px;
+.notification-btn {
+  position: relative;
+}
+.notification-btn::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: #555;
-  cursor: pointer;
+  background: #ff0000;
 }
 .main {
   display: flex;
@@ -271,6 +283,7 @@ body.sidebar-mini .sidebar-item:hover::after {
   border-radius: 50%;
   background: #333;
   flex-shrink: 0;
+  object-fit: cover;
 }
 .video-meta {
   display: flex;
@@ -593,21 +606,6 @@ body.mobile-sidebar-open .backdrop {
 .autocomplete-item.active {
   background-color: #333333;
 }
-.menu-toggle-btn {
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.menu-toggle-btn:hover {
-  background-color: #272727;
-}
 @media (max-width: 1024px) {
   .watch-layout.active {
     grid-template-columns: 1fr;
@@ -701,13 +699,12 @@ body.mobile-sidebar-open .backdrop {
     </button>
   </div>
   <div class="header-right">
-    <button class="icon-btn">
-      <span class="material-symbols-rounded">video_call</span>
-    </button>
-    <button class="icon-btn">
+    <button class="notification-btn" id="notificationBtn">
       <span class="material-symbols-rounded">notifications</span>
     </button>
-    <div class="avatar"></div>
+    <button class="account-btn" id="accountBtn">
+      <span class="material-symbols-rounded">account_circle</span>
+    </button>
   </div>
 </header>
 <main class="main">
@@ -811,7 +808,10 @@ var state = {
   currentVideo: null,
   likedVideos: JSON.parse(localStorage.getItem("yt_liked") || "[]"),
   history: JSON.parse(localStorage.getItem("yt_history") || "[]"),
-  subscriptions: ["TechDaily", "Music Vevo", "Gaming Hub", "Daily Vlogs"]
+  subscriptions: ["Marques Brownlee", "Linus Tech Tips", "MrBeast", "Kurzgesagt", "Veritasium"],
+  homeTopics: ["Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking", "Podcasts", "Tech", "Movies"],
+  homeTopicIndex: 0,
+  isLoadingMore: false
 };
 var currentResults = [];
 var currentVideoIndex = -1;
@@ -844,7 +844,9 @@ var els = {
   embedYoutube: document.getElementById("embedYoutube"),
   embedTheta: document.getElementById("embedTheta"),
   sidebar: document.getElementById("sidebar"),
-  menuToggle: document.getElementById("menuToggle")
+  menuToggle: document.getElementById("menuToggle"),
+  notificationBtn: document.getElementById("notificationBtn"),
+  accountBtn: document.getElementById("accountBtn")
 };
 function isMobile() {
   return window.innerWidth <= 960;
@@ -934,7 +936,7 @@ function updateAutocomplete() {
       item.addEventListener("click", function () {
         els.searchInput.value = text;
         els.autocomplete.style.display = "none";
-        performSearch(text);
+        performSearch(text, false);
       });
       els.autocomplete.appendChild(item);
     });
@@ -944,6 +946,12 @@ function updateAutocomplete() {
 els.searchInput.addEventListener("input", updateAutocomplete);
 els.searchInput.addEventListener("keydown", function (e) {
   var items = els.autocomplete.querySelectorAll(".autocomplete-item");
+  if (e.key === "Enter") {
+    e.preventDefault();
+    els.autocomplete.style.display = "none";
+    performSearch(els.searchInput.value, false);
+    return;
+  }
   if (!items.length) return;
   if (e.key === "ArrowDown") {
     e.preventDefault();
@@ -951,32 +959,12 @@ els.searchInput.addEventListener("keydown", function (e) {
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
     selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-  } else if (e.key === "Enter") {
-    if (selectedIndex >= 0) {
-      e.preventDefault();
-      var textSpan = items[selectedIndex].querySelector(".autocomplete-text");
-      var val = textSpan ? textSpan.textContent.trim() : items[selectedIndex].innerText.trim();
-      els.searchInput.value = val;
-      els.autocomplete.style.display = "none";
-      performSearch(val);
-    } else {
-      performSearch(els.searchInput.value);
-    }
-    return;
   } else if (e.key === "Escape") {
     els.autocomplete.style.display = "none";
     return;
   } else {
     return;
   }
-
-  searchInput.addEventListener('keydown', (e)  => {
-    if (e.key === 'Enter') {
-      autocomplete.style.display = 'none';
-      performSearch(searchInput.value); 
-    }
-  });
-  
   items.forEach(function (item) {
     item.classList.remove("active");
   });
@@ -991,7 +979,8 @@ document.addEventListener("click", function (e) {
   }
 });
 els.searchButton.addEventListener("click", function () {
-  performSearch(els.searchInput.value);
+  els.autocomplete.style.display = "none";
+  performSearch(els.searchInput.value, false);
 });
 els.homeLogo.addEventListener("click", function () {
   switchTab("home", "");
@@ -1003,6 +992,8 @@ els.chips.forEach(function (chip) {
     });
     chip.classList.add("active");
     var q = chip.getAttribute("data-query") || "";
+    state.homeTopicIndex = 0;
+    state.searchQuery = q;
     switchTab("home", q);
   });
 });
@@ -1012,9 +1003,26 @@ els.sidebarItems.forEach(function (item) {
     switchTab(page, "");
   });
 });
-function renderGrid(list) {
-  els.resultsGrid.innerHTML = "";
-  if (!list.length) {
+els.notificationBtn.addEventListener("click", function () {
+  showToast("You can deploy this site yourself: https://github.com/IHATECAMOUFLAGE/Youtube");
+});
+els.accountBtn.addEventListener("click", function () {
+  showToast("Account options will be available soon.");
+});
+function channelAvatarUrl(name) {
+  var base = "https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=";
+  return base + encodeURIComponent(name || "YouTube");
+}
+function truncateTitle(title, max) {
+  if (!title) return "";
+  if (title.length <= max) return title;
+  return title.slice(0, max - 1) + "…";
+}
+function renderGrid(list, append) {
+  if (!append) {
+    els.resultsGrid.innerHTML = "";
+  }
+  if (!list.length && !append) {
     els.mainEmpty.style.display = "block";
     return;
   }
@@ -1023,7 +1031,8 @@ function renderGrid(list) {
     var card = document.createElement("article");
     card.className = "video-card";
     var thumbUrl = video.thumbnail || "";
-    var title = video.title || "";
+    var titleFull = video.title || "";
+    var title = truncateTitle(titleFull, 70);
     var channel = video.channel || "";
     var views = video.views || "";
     var duration = video.duration || "";
@@ -1035,9 +1044,13 @@ function renderGrid(list) {
       (duration ? '<div class="duration-badge">' + duration + "</div>" : "") +
       "</div>" +
       '<div class="video-info">' +
-      '<div class="video-avatar"></div>' +
+      '<img class="video-avatar" src="' +
+      channelAvatarUrl(channel) +
+      '" alt="">' +
       '<div class="video-meta">' +
-      '<h3 class="video-title">' +
+      '<h3 class="video-title" title="' +
+      titleFull.replace(/"/g, "&quot;") +
+      '">' +
       title +
       "</h3>" +
       '<p class="video-channel">' +
@@ -1050,7 +1063,9 @@ function renderGrid(list) {
       "</div>" +
       "</div>";
     card.addEventListener("click", function () {
-      openWatch(index);
+      currentResults = append ? currentResults : list;
+      var idx = append ? Array.prototype.indexOf.call(els.resultsGrid.children, card) : index;
+      openWatch(idx);
     });
     els.resultsGrid.appendChild(card);
   });
@@ -1066,7 +1081,8 @@ function renderStorageGrid(videos) {
     var card = document.createElement("article");
     card.className = "video-card";
     var thumbUrl = video.thumbnail || "";
-    var title = video.title || "";
+    var titleFull = video.title || "";
+    var title = truncateTitle(titleFull, 70);
     var channel = video.channel || "";
     var views = video.views || "";
     var duration = video.duration || "";
@@ -1078,9 +1094,13 @@ function renderStorageGrid(videos) {
       (duration ? '<div class="duration-badge">' + duration + "</div>" : "") +
       "</div>" +
       '<div class="video-info">' +
-      '<div class="video-avatar"></div>' +
+      '<img class="video-avatar" src="' +
+      channelAvatarUrl(channel) +
+      '" alt="">' +
       '<div class="video-meta">' +
-      '<h3 class="video-title">' +
+      '<h3 class="video-title" title="' +
+      titleFull.replace(/"/g, "&quot;") +
+      '">' +
       title +
       "</h3>" +
       '<p class="video-channel">' +
@@ -1099,29 +1119,41 @@ function renderStorageGrid(videos) {
     els.resultsGrid.appendChild(card);
   });
 }
-function performSearch(query) {
+function performSearch(query, append) {
   if (!query) query = "";
   state.searchQuery = query;
   els.searchInput.value = query;
-  els.mainEmpty.style.display = "none";
-  els.resultsGrid.innerHTML = '<div class="loader"></div>';
-  fetch(API_BASE + "?query=" + encodeURIComponent(query))
+  if (!append) {
+    els.mainEmpty.style.display = "none";
+    els.resultsGrid.innerHTML = '<div class="loader"></div>';
+  }
+  return fetch(API_BASE + "?query=" + encodeURIComponent(query))
     .then(function (res) {
       return res.json();
     })
     .then(function (data) {
-      currentResults = data.results || [];
-      state.currentTab = "search";
-      els.mainSection.classList.remove("hidden");
-      els.shortsSection.classList.add("hidden");
-      els.watchLayout.classList.add("hidden");
-      els.watchLayout.classList.remove("active");
-      els.pageTitle.style.display = "none";
-      renderGrid(currentResults);
+      var results = data.results || [];
+      if (!append) {
+        currentResults = results;
+        state.currentTab = "search";
+        els.mainSection.classList.remove("hidden");
+        els.shortsSection.classList.add("hidden");
+        els.watchLayout.classList.add("hidden");
+        els.watchLayout.classList.remove("active");
+        els.pageTitle.style.display = "none";
+        renderGrid(currentResults, false);
+      } else {
+        currentResults = currentResults.concat(results);
+        renderGrid(results, true);
+      }
+      return results;
     })
     .catch(function () {
-      els.resultsGrid.innerHTML =
-        '<div class="empty-state"><span class="material-symbols-rounded">error</span><p>Error loading results.</p></div>';
+      if (!append) {
+        els.resultsGrid.innerHTML =
+          '<div class="empty-state"><span class="material-symbols-rounded">error</span><p>Error loading results.</p></div>';
+      }
+      return [];
     });
 }
 function openWatch(index) {
@@ -1154,7 +1186,8 @@ function renderRelated(activeIndex) {
     var item = document.createElement("div");
     item.className = "related-item";
     var thumbUrl = video.thumbnail || "";
-    var title = video.title || "";
+    var titleFull = video.title || "";
+    var title = truncateTitle(titleFull, 70);
     var channel = video.channel || "";
     var views = video.views || "";
     var duration = video.duration || "";
@@ -1165,7 +1198,9 @@ function renderRelated(activeIndex) {
       '" onerror="this.src=\'https://via.placeholder.com/168x94\'">' +
       "</div>" +
       '<div class="related-info">' +
-      '<div class="related-title">' +
+      '<div class="related-title" title="' +
+      titleFull.replace(/"/g, "&quot;") +
+      '">' +
       title +
       "</div>" +
       '<div class="related-channel">' +
@@ -1251,32 +1286,113 @@ function showToast(msg) {
     els.toast.classList.remove("show");
   }, 3000);
 }
-function loadShorts() {
+function loadShortsFeed() {
   els.shortsGrid.innerHTML = "";
-  var sample = currentResults.slice(0, 10);
-  if (!sample.length) {
-    els.shortsGrid.innerHTML =
-      '<div class="empty-state"><span class="material-symbols-rounded">movie</span><p>No shorts available.</p></div>';
-    return;
+  var baseQuery = state.searchQuery || "YouTube";
+  if (!/shorts/i.test(baseQuery)) {
+    baseQuery = baseQuery + " shorts";
   }
-  sample.forEach(function (video, index) {
-    var card = document.createElement("div");
-    card.className = "shorts-card";
-    var thumbUrl = video.thumbnail || "";
-    var title = video.title || "";
-    card.innerHTML =
-      '<div class="thumbnail">' +
-      '<img src="' +
-      thumbUrl +
-      '" onerror="this.src=\'https://via.placeholder.com/200x356\'">' +
-      "</div>" +
-      '<h3 class="video-title">' +
-      title +
-      "</h3>";
-    card.addEventListener("click", function () {
-      openWatch(index);
+  performSearch(baseQuery, false).then(function (results) {
+    els.shortsGrid.innerHTML = "";
+    if (!results.length) {
+      els.shortsGrid.innerHTML =
+        '<div class="empty-state"><span class="material-symbols-rounded">movie</span><p>No shorts available.</p></div>';
+      return;
+    }
+    results.slice(0, 20).forEach(function (video, index) {
+      var card = document.createElement("div");
+      card.className = "shorts-card";
+      var thumbUrl = video.thumbnail || "";
+      var titleFull = video.title || "";
+      var title = truncateTitle(titleFull, 60);
+      card.innerHTML =
+        '<div class="thumbnail">' +
+        '<img src="' +
+        thumbUrl +
+        '" onerror="this.src=\'https://via.placeholder.com/200x356\'">' +
+        "</div>" +
+        '<h3 class="video-title" title="' +
+        titleFull.replace(/"/g, "&quot;") +
+        '">' +
+        title +
+        "</h3>";
+      card.addEventListener("click", function () {
+        currentResults = results;
+        openWatch(index);
+      });
+      els.shortsGrid.appendChild(card);
     });
-    els.shortsGrid.appendChild(card);
+  });
+}
+function loadHomeFeed(initial) {
+  if (state.isLoadingMore) return;
+  state.isLoadingMore = true;
+  var topicsToLoad = initial ? 3 : 1;
+  var promises = [];
+  for (var i = 0; i < topicsToLoad; i++) {
+    var topic = state.searchQuery;
+    if (!topic) {
+      if (state.homeTopics.length === 0) break;
+      topic = state.homeTopics[state.homeTopicIndex % state.homeTopics.length];
+      state.homeTopicIndex++;
+    }
+    promises.push(
+      fetch(API_BASE + "?query=" + encodeURIComponent(topic))
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (data) {
+          return data.results || [];
+        })
+        .catch(function () {
+          return [];
+        })
+    );
+  }
+  Promise.all(promises).then(function (allResults) {
+    var flat = [];
+    allResults.forEach(function (arr) {
+      flat = flat.concat(arr);
+    });
+    if (initial) {
+      currentResults = flat;
+      renderGrid(currentResults, false);
+    } else {
+      currentResults = currentResults.concat(flat);
+      renderGrid(flat, true);
+    }
+    state.isLoadingMore = false;
+  });
+}
+window.addEventListener("scroll", function () {
+  if (state.currentTab !== "home") return;
+  var scrollPos = window.innerHeight + window.scrollY;
+  var threshold = document.body.offsetHeight - 600;
+  if (scrollPos >= threshold) {
+    loadHomeFeed(false);
+  }
+});
+function loadSubscriptionsFeed() {
+  els.resultsGrid.innerHTML = '<div class="loader"></div>';
+  var promises = state.subscriptions.map(function (name) {
+    return fetch(API_BASE + "?query=" + encodeURIComponent(name))
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (data) {
+        return data.results || [];
+      })
+      .catch(function () {
+        return [];
+      });
+  });
+  Promise.all(promises).then(function (lists) {
+    var combined = [];
+    lists.forEach(function (arr) {
+      combined = combined.concat(arr);
+    });
+    currentResults = combined;
+    renderGrid(currentResults, false);
   });
 }
 function switchTab(tabName, query) {
@@ -1289,15 +1405,20 @@ function switchTab(tabName, query) {
     if (item.dataset.page === tabName) item.classList.add("active");
     else item.classList.remove("active");
   });
-  if (tabName === "home" && !query) {
-    els.chips.forEach(function (c) {
-      c.classList.remove("active");
-    });
-    els.chips[0].classList.add("active");
-  }
-  if (tabName === "shorts") {
+  if (tabName === "home") {
+    els.mainSection.classList.remove("hidden");
+    els.pageTitle.style.display = "none";
+    if (query) {
+      state.searchQuery = query;
+      performSearch(query, false);
+    } else {
+      state.searchQuery = "";
+      state.homeTopicIndex = 0;
+      loadHomeFeed(true);
+    }
+  } else if (tabName === "shorts") {
     els.shortsSection.classList.remove("hidden");
-    loadShorts();
+    loadShortsFeed();
   } else if (tabName === "history") {
     els.mainSection.classList.remove("hidden");
     els.pageTitle.style.display = "block";
@@ -1327,17 +1448,14 @@ function switchTab(tabName, query) {
     els.mainSection.classList.remove("hidden");
     els.pageTitle.style.display = "block";
     els.pageTitle.textContent = "Latest from Subscriptions";
-    performSearch("Tech Review");
+    loadSubscriptionsFeed();
   } else {
     els.mainSection.classList.remove("hidden");
     els.pageTitle.style.display = "none";
-    performSearch(query);
+    performSearch(query, false);
   }
 }
-  
-var presets = ["Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking"];
-var randomQuery = presets[Math.floor(Math.random() * presets.length)];
-switchTab("home", randomQuery);
+switchTab("home", "");
 </script>
 </body>
 </html>
