@@ -969,6 +969,14 @@ els.searchInput.addEventListener("keydown", function (e) {
   } else {
     return;
   }
+
+  searchInput.addEventListener('keydown', (e)  => {
+    if (e.key === 'Enter') {
+      autocomplete.style.display = 'none';
+      performSearch(searchInput.value); 
+    }
+  });
+  
   items.forEach(function (item) {
     item.classList.remove("active");
   });
@@ -1327,7 +1335,7 @@ function switchTab(tabName, query) {
   }
 }
   
-var presets = ["", "Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking"];
+var presets = ["Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking"];
 var randomQuery = presets[Math.floor(Math.random() * presets.length)];
 switchTab("home", randomQuery);
 </script>
