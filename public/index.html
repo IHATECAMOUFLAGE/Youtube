@@ -1326,7 +1326,10 @@ function switchTab(tabName, query) {
     performSearch(query);
   }
 }
-switchTab("home", "");
+  
+var presets = ["", "Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking"];
+var randomQuery = presets[Math.floor(Math.random() * presets.length)];
+switchTab("home", randomQuery);
 </script>
 </body>
 </html>
