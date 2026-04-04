@@ -43,6 +43,6 @@ To deploy the site, use a non static hosting service such as render, Your own VP
 
 After that, you have the website!
 
-# Discord: **https://discord.gg/ujGFjYcuWn**
+### Discord: **https://discord.gg/ujGFjYcuWn**
 
 Made by Infared.
