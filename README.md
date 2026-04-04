@@ -1,3 +1,4 @@
+Make the liscense follow this new readme:
 # YouTube Clone (Custom Frontend)
 
 This project is a custom Alternative youtube frontend built for educational and personal use.
@@ -16,20 +17,19 @@ You are **NOT allowed** to:
 
 - Claim you created this project  
 - Claim partial or complete ownership  
-- Redistribute modified versions  
-- Publish forks, edits, or derivatives  
+- Redistribute modified versions  *without permission*
 - Re‑upload this project anywhere *without complete credit* (complete credit means the server name **Infared**, **original git repo**, discord ID (**_maacy_**) and author email (**ihatecamouflage@hotmail.com**))
 - Use loopholes, reinterpretations, or technicalities to bypass these restrictions
 
-Any attempt to bypass these rules — including through rewording, reframing, or indirect distribution — is explicitly forbidden.
+Any attempt to bypass these rules — including through rewording, reframing, is explicitly forbidden.
 
 ## Permissions
 
-If you want to modify or redistribute this project publicly, you **must** obtain permission from the owner.
+If you want to modify **and** redistribute this project publicly, you **must** obtain permission from the owner.
 
 # Allowed people able to modify/redistribute:
 - DISCORD ID: **divinelordkaio**
-- DISCORD ID: **divinelordkaio**
+- DISCORD SERVER'S SITE DEVELOPERS: **https://discord.gg/ryhPyrX8gt**
 
 ## Attribution
 
