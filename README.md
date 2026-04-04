@@ -39,7 +39,10 @@ Unauthorized redistribution or misrepresentation is prohibited.
 
 ## Deployment
 
-You may deploy your own personal instance of this project.  
-Instructions and backend code can be found at:
+To deploy the site, use a non static hosting service such as render, Your own VPS server, fly.io, glitch, heroku, or others to deploy.
 
-https://github.com/IHATECAMOUFLAGE/Youtube
+After that, you have the website!
+
+# Discord: **https://discord.gg/jGWYxVNN2P**
+
+Made by Infared.
