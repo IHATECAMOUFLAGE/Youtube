@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <link rel="icon" type="image/x-icon" href="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=256">
   <meta charset="UTF-8">
-  <title>YouTube Style Player</title>
+  <title>YouTube</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
@@ -13,23 +14,23 @@
       --bg-sidebar: #0f0f0f;
       --bg-card: #181818;
       --bg-chip: #272727;
-      --bg-chip-active: #ffffff;
+      --bg-chip-active: #f1f1f1;
       --text-primary: #ffffff;
       --text-secondary: #aaaaaa;
       --border-subtle: #303030;
-      --accent: #f1f1f1;
+      --accent: #3ea6ff;
       --tooltip-bg: #282828;
+      --brand-red: #ff0000;
     }
-    *,
-    *::before,
-    *::after {
+    *, *::before, *::after {
       box-sizing: border-box;
     }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background-color: var(--bg-main);
       color: var(--text-primary);
+      overflow-x: hidden;
     }
     .header {
       position: sticky;
@@ -42,22 +43,98 @@
       height: 56px;
       background-color: var(--bg-header);
     }
-    .header-left,
-    .header-center,
-    .header-right {
+    .header-left, .header-center, .header-right {
       display: flex;
       align-items: center;
     }
-    .header-left {
-      gap: 16px;
+    .header-left { gap: 16px; }
+    .header-center { flex: 0 1 640px; justify-content: center; gap: 8px; }
+    .header-right { gap: 8px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      text-decoration: none;
     }
-    .header-center {
-      flex: 0 1 640px;
+    .brand-svg {
+      height: 20px;
+      width: auto;
+    }
+    .search-wrapper {
+      display: flex;
+      align-items: stretch;
+      flex: 1;
+      max-width: 600px;
+      position: relative;
+    }
+    .search-input {
+      flex: 1;
+      background-color: #121212;
+      border: 1px solid #303030;
+      border-right: none;
+      border-radius: 999px 0 0 999px;
+      padding: 8px 16px;
+      color: var(--text-primary);
+      font-size: 16px;
+      position: relative;
+      z-index: 10;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #3ea6ff;
+    }
+    .search-btn {
+      border-radius: 0 999px 999px 0;
+      background-color: #222222;
+      border: 1px solid #303030;
+      border-left: none;
+      width: 64px;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+    .search-btn:hover { background-color: #333; }
+    .autocomplete {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      right: 64px;
+      background-color: #212121;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      max-height: 360px;
+      overflow-y: auto;
+      display: none;
+      padding: 4px 0;
+      z-index: 20;
+    }
+    .autocomplete-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .autocomplete-item:hover, .autocomplete-item.active { background-color: #333333; }
+    .icon-btn, .mic-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      gap: 8px;
+      cursor: pointer;
     }
-    .header-right {
-      gap: 8px;
+    .icon-btn:hover, .mic-btn:hover { background-color: #272727; }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #555;
+      cursor: pointer;
     }
     .main {
       display: flex;
@@ -97,24 +174,14 @@
       cursor: pointer;
       position: relative;
     }
-    .sidebar-item:hover {
-      background-color: #272727;
-    }
-    .sidebar-item.active {
-      background-color: #272727;
-    }
-    .sidebar-icon {
-      font-size: 22px;
-    }
-    body.sidebar-full .sidebar {
-      width: 240px;
-    }
-    body.sidebar-mini .sidebar {
-      width: 72px;
-    }
-    body.sidebar-mini .sidebar-label {
-      display: none;
-    }
+    .sidebar-item:hover { background-color: #272727; }
+    .sidebar-item.active { background-color: #272727; font-weight: 500; }
+    .sidebar-icon { font-size: 22px; }
+    body.sidebar-full .sidebar { width: 240px; }
+    body.sidebar-mini .sidebar { width: 72px; }
+    body.sidebar-mini .sidebar-label { display: none; }
+    body.sidebar-mini .sidebar-item { padding: 8px 0; justify-content: center; gap: 0; }
+    body.sidebar-mini .sidebar-icon { margin: 0; }
     body.sidebar-mini .sidebar-item::after {
       content: attr(data-tooltip);
       position: fixed;
@@ -130,6 +197,7 @@
       transform: translateX(-4px);
       transition: opacity 0.15s ease, transform 0.15s ease;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      z-index: 200;
     }
     body.sidebar-mini .sidebar-item:hover::after {
       opacity: 1;
@@ -138,195 +206,125 @@
     .content {
       flex: 1;
       padding: 24px 24px 40px;
+      width: 100%;
     }
     .chips-row {
       display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
+      gap: 12px;
+      margin-bottom: 24px;
       overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
     }
+    .chips-row::-webkit-scrollbar { display: none; }
     .chip {
       border: none;
-      border-radius: 16px;
+      border-radius: 8px;
       padding: 6px 12px;
       font-size: 14px;
+      font-weight: 500;
       background-color: var(--bg-chip);
       color: var(--text-primary);
       cursor: pointer;
       white-space: nowrap;
+      transition: background 0.2s;
     }
+    .chip:hover { background-color: #3f3f3f; }
     .chip.active {
       background-color: var(--bg-chip-active);
       color: #0f0f0f;
     }
+    .section-header {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: none;
+    }
     .video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px 16px;
     }
-    .video-card {
-      cursor: pointer;
-    }
+    .video-card { cursor: pointer; }
     .thumbnail {
       width: 100%;
       aspect-ratio: 16 / 9;
       background: #333;
       border-radius: 12px;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       overflow: hidden;
+      position: relative;
     }
     .thumbnail img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+      transition: transform 0.3s;
     }
-    .video-info {
-      display: flex;
-      gap: 12px;
+    .video-card:hover .thumbnail img { transform: scale(1.05); }
+    .duration-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-weight: 500;
     }
+    .video-info { display: flex; gap: 12px; }
     .video-avatar {
       width: 36px;
       height: 36px;
       border-radius: 50%;
       background: #333;
+      flex-shrink: 0;
     }
-    .video-meta {
+    .video-meta { display: flex; flex-direction: column; gap: 2px; }
+    .video-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0;
+      line-height: 1.2rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-channel, .video-stats { font-size: 14px; color: var(--text-secondary); margin: 0; }
+    .shorts-grid {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+      scrollbar-width: none;
+    }
+    .shorts-grid::-webkit-scrollbar { display: none; }
+    .shorts-card {
+      min-width: 200px;
+      cursor: pointer;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 8px;
     }
-    .video-title {
+    .shorts-card .thumbnail {
+      margin-bottom: 0;
+      aspect-ratio: 9/16;
+      border-radius: 16px;
+    }
+    .shorts-card .video-title {
       font-size: 14px;
-      margin: 0;
-    }
-    .video-channel,
-    .video-stats {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin: 0;
-    }
-    .icon-btn,
-    .mic-btn,
-    .search-btn {
-      border: none;
-      background: transparent;
-      color: var(--text-primary);
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-    .icon-btn:hover,
-    .mic-btn:hover,
-    .search-btn:hover {
-      background-color: #272727;
-    }
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #555;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .brand-logo {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      object-fit: cover;
-    }
-    .brand-text {
-      font-size: 18px;
-      font-weight: 600;
-    }
-    .search-wrapper {
-      display: flex;
-      align-items: stretch;
-      flex: 1;
-      max-width: 600px;
-      position: relative;
-    }
-    .search-input {
-      flex: 1;
-      background-color: #121212;
-      border: 1px solid #303030;
-      border-right: none;
-      border-radius: 999px 0 0 999px;
-      padding: 8px 12px;
-      color: var(--text-primary);
-      font-size: 14px;
-      position: relative;
-      z-index: 10;
-    }
-    .search-input:focus {
-      outline: none;
-      border-color: #3ea6ff;
-    }
-    .search-btn {
-      border-radius: 0 999px 999px 0;
-      background-color: #222222;
-      border: 1px solid #303030;
-      border-left: none;
-      width: 64px;
-    }
-    .autocomplete {
-      position: absolute;
-      top: 40px;
-      left: 0;
-      right: 64px;
-      background-color: #212121;
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-      max-height: 360px;
-      overflow-y: auto;
-      display: none;
-      padding: 4px 0;
-      z-index: 20;
-    }
-    .autocomplete-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .autocomplete-item:hover,
-    .autocomplete-item.active {
-      background-color: #333333;
-    }
-    .backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-      z-index: 90;
-    }
-    body.mobile-sidebar-open .backdrop {
-      opacity: 1;
-      pointer-events: auto;
+      -webkit-line-clamp: 2;
     }
     .watch-layout {
       display: none;
       gap: 24px;
+      max-width: 100%;
     }
-    .watch-layout.active {
-      display: grid;
-      grid-template-columns: minmax(0, 2.5fr) minmax(0, 1fr);
-      gap: 24px;
-    }
-    .watch-player {
-      width: 100%;
-    }
+    .watch-layout.active { display: grid; grid-template-columns: minmax(0, 2.5fr) minmax(0, 1fr); gap: 24px; }
+    .watch-player { width: 100%; }
     .watch-player iframe {
       width: 100%;
       aspect-ratio: 16 / 9;
@@ -334,10 +332,7 @@
       border-radius: 12px;
       background: #000;
     }
-    .watch-title {
-      font-size: 18px;
-      margin: 12px 0 8px;
-    }
+    .watch-title { font-size: 20px; margin: 12px 0 8px; font-weight: 600; }
     .watch-meta-row {
       display: flex;
       justify-content: space-between;
@@ -346,29 +341,19 @@
       gap: 8px;
       font-size: 14px;
       color: var(--text-secondary);
+      border-bottom: 1px solid #303030;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
     }
-    .watch-channel {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .watch-channel-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #333;
-    }
-    .watch-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .watch-channel { display: flex; align-items: center; gap: 12px; }
+    .watch-channel-avatar { width: 40px; height: 40px; border-radius: 50%; background: #333; }
+    .watch-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .pill-btn {
       border-radius: 999px;
       border: none;
-      padding: 6px 12px;
-      font-size: 13px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
       background: #272727;
       color: var(--text-primary);
       display: inline-flex;
@@ -376,9 +361,8 @@
       gap: 6px;
       cursor: pointer;
     }
-    .pill-btn:hover {
-      background: #3a3a3a;
-    }
+    .pill-btn:hover { background: #3a3a3a; }
+    .pill-btn.liked { background: #3ea6ff; color: #0f0f0f; }
     .embed-toggle {
       display: inline-flex;
       border-radius: 999px;
@@ -389,32 +373,22 @@
       border: none;
       background: transparent;
       color: var(--text-secondary);
-      padding: 6px 10px;
+      padding: 6px 12px;
       font-size: 12px;
       cursor: pointer;
     }
-    .embed-toggle button.active {
-      background: #ffffff;
-      color: #000000;
-    }
+    .embed-toggle button.active { background: #ffffff; color: #000000; }
     .watch-description {
       margin-top: 12px;
       padding: 12px;
       background: #202020;
       border-radius: 12px;
-      font-size: 13px;
-      color: var(--text-secondary);
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.4;
     }
-    .related-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .related-item {
-      display: flex;
-      gap: 8px;
-      cursor: pointer;
-    }
+    .related-list { display: flex; flex-direction: column; gap: 8px; }
+    .related-item { display: flex; gap: 8px; cursor: pointer; }
     .related-thumb {
       width: 168px;
       height: 94px;
@@ -422,118 +396,92 @@
       overflow: hidden;
       background: #333;
       flex-shrink: 0;
+      position: relative;
     }
-    .related-thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .related-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      font-size: 12px;
-    }
-    .related-title {
-      color: var(--text-primary);
-    }
-    .related-channel,
-    .related-stats {
-      color: var(--text-secondary);
-    }
-    .home-section {
-      display: block;
-    }
-    .home-section.hidden {
-      display: none;
-    }
-    .watch-layout.hidden {
-      display: none;
-    }
+    .related-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .related-info { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+    .related-title { color: var(--text-primary); font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+    .related-channel, .related-stats { color: var(--text-secondary); font-size: 12px; }
+    .home-section { display: block; }
+    .home-section.hidden { display: none; }
+    .watch-layout.hidden { display: none; }
     .empty-state {
-      padding: 40px 20px;
+      padding: 60px 20px;
       text-align: center;
       color: var(--text-secondary);
-      font-size: 14px;
     }
+    .empty-state span { font-size: 48px; display: block; margin-bottom: 16px; opacity: 0.5; }
     .loader {
       border: 3px solid #333;
-      border-top: 3px solid var(--accent);
+      border-top: 3px solid #fff;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
+      width: 40px;
+      height: 40px;
       animation: spin 1s linear infinite;
-      margin: 40px auto;
+      margin: 60px auto;
     }
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      background-color: #fff;
+      color: #0f0f0f;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 2000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .backdrop {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 90;
+    }
+    body.mobile-sidebar-open .backdrop { opacity: 1; pointer-events: auto; }
+    @media (max-width: 1024px) {
+      .watch-layout.active { grid-template-columns: 1fr; }
+      .related-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-top: 24px; }
+      .related-item { flex-direction: column; }
+      .related-thumb { width: 100%; aspect-ratio: 16/9; height: auto; }
     }
     @media (max-width: 960px) {
-      .main {
-        padding-top: 0;
-      }
+      .main { padding-top: 0; }
       .sidebar {
-        position: fixed;
-        top: 56px;
-        left: 0;
-        height: calc(100vh - 56px);
-        transform: translateX(-100%);
-        width: 240px;
-        z-index: 100;
+        position: fixed; top: 56px; left: 0; height: calc(100vh - 56px);
+        transform: translateX(-100%); width: 240px; z-index: 100;
       }
-      body.mobile-sidebar-open .sidebar {
-        transform: translateX(0);
-      }
-      body.sidebar-full .sidebar,
-      body.sidebar-mini .sidebar {
-        width: 240px;
-      }
-      .content {
-        padding: 16px;
-      }
-      .header-center {
-        flex: 1;
-        margin: 0 8px;
-      }
-      .search-wrapper {
-        max-width: none;
-      }
-      .autocomplete {
-        right: 0;
-      }
-      .watch-layout.active {
-        display: block;
-      }
-      .related-list {
-        margin-top: 16px;
-      }
+      body.mobile-sidebar-open .sidebar { transform: translateX(0); }
+      body.sidebar-full .sidebar, body.sidebar-mini .sidebar { width: 240px; }
+      .content { padding: 16px; }
+      .header-center { flex: 1; margin: 0 8px; }
+      .search-wrapper { max-width: none; }
+      .autocomplete { right: 0; }
     }
     @media (max-width: 600px) {
-      .brand-text {
-        display: none;
-      }
-      .header-right {
-        gap: 4px;
-      }
+      .header-right { gap: 4px; }
+      .video-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body class="sidebar-full">
   <div class="backdrop" id="backdrop"></div>
+  
   <header class="header">
     <div class="header-left">
-      <button class="icon-btn" id="menuToggle" aria-label="Toggle sidebar">
-        <span class="material-symbols-rounded">menu</span>
-      </button>
-      <div class="brand">
-        <span class="material-symbols-rounded brand-logo" style="background:#ff0000;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:6px;">play_arrow</span>
-        <span class="brand-text">YouTube Clone</span>
+      <div class="brand" id="homeLogo">
+        <svg class="brand-svg" viewBox="0 0 90 20" preserveAspectRatio="xMidYMid meet" focusable="false" style="pointer-events: none; display: block; width: 90px; height: 20px;">
+          <g viewBox="0 0 90 20" preserveAspectRatio="none">
+            <g>
+              <path d="M27.9704 3.12324C27.6411 1.89323 26.6745 0.926623 25.4445 0.597366C23.2173 2.24288e-07 14.2827 0 14.2827 0C14.2827 0 5.34807 2.24288e-07 3.12088 0.597366C1.89323 0.926623 0.924271 1.89323 0.595014 3.12324C-2.8036e-07 5.35042 0 10 0 10C0 10 -1.57361e-07 14.6496 0.597364 16.8768C0.926621 18.1068 1.89323 19.0734 3.12324 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6769 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5677 5.35042 27.9704 3.12324Z" fill="#FF0000"></path>
+            </g>
+            <g>
+              Youtube
+            </g>
+          </g>
+        </svg>
       </div>
     </div>
     <div class="header-center">
@@ -558,53 +506,66 @@
       <div class="avatar"></div>
     </div>
   </header>
+
   <main class="main">
     <aside class="sidebar" id="sidebar">
       <nav class="sidebar-section">
-        <a class="sidebar-item active" data-tooltip="Home">
+        <a class="sidebar-item active" data-page="home" data-tooltip="Home">
           <span class="material-symbols-rounded sidebar-icon">home</span>
           <span class="sidebar-label">Home</span>
         </a>
-        <a class="sidebar-item" data-tooltip="Shorts">
+        <a class="sidebar-item" data-page="shorts" data-tooltip="Shorts">
           <span class="material-symbols-rounded sidebar-icon">play_circle</span>
           <span class="sidebar-label">Shorts</span>
         </a>
-        <a class="sidebar-item" data-tooltip="Subscriptions">
+        <a class="sidebar-item" data-page="subscriptions" data-tooltip="Subscriptions">
           <span class="material-symbols-rounded sidebar-icon">subscriptions</span>
           <span class="sidebar-label">Subscriptions</span>
         </a>
       </nav>
       <hr class="sidebar-divider">
       <nav class="sidebar-section">
-        <a class="sidebar-item" data-tooltip="Library">
+        <a class="sidebar-item" data-page="library" data-tooltip="Library">
           <span class="material-symbols-rounded sidebar-icon">video_library</span>
           <span class="sidebar-label">Library</span>
         </a>
-        <a class="sidebar-item" data-tooltip="History">
+        <a class="sidebar-item" data-page="history" data-tooltip="History">
           <span class="material-symbols-rounded sidebar-icon">history</span>
           <span class="sidebar-label">History</span>
         </a>
-        <a class="sidebar-item" data-tooltip="Liked videos">
+        <a class="sidebar-item" data-page="liked" data-tooltip="Liked videos">
           <span class="material-symbols-rounded sidebar-icon">thumb_up</span>
           <span class="sidebar-label">Liked videos</span>
         </a>
       </nav>
     </aside>
+
     <section class="content">
-      <div class="chips-row">
-        <button class="chip active">All</button>
-        <button class="chip">Music</button>
-        <button class="chip">Gaming</button>
-        <button class="chip">News</button>
-        <button class="chip">Live</button>
-        <button class="chip">Vlogs</button>
+      <div class="chips-row" id="chipsRow">
+        <button class="chip active" data-query="">All</button>
+        <button class="chip" data-query="Music">Music</button>
+        <button class="chip" data-query="Gaming">Gaming</button>
+        <button class="chip" data-query="News">News</button>
+        <button class="chip" data-query="Live">Live</button>
+        <button class="chip" data-query="Vlogs">Vlogs</button>
+        <button class="chip" data-query="Programming">Programming</button>
+        <button class="chip" data-query="Cooking">Cooking</button>
       </div>
-      <div id="homeSection" class="home-section">
-        <div id="homeEmpty" class="empty-state">
-          Recommended videos loaded. Use search to filter.
+
+      <div id="mainSection" class="home-section">
+        <h2 id="pageTitle" class="section-header">Recommended</h2>
+        <div id="mainEmpty" class="empty-state" style="display:none;">
+          <span class="material-symbols-rounded">search_off</span>
+          <p>No videos found.</p>
         </div>
         <div id="resultsGrid" class="video-grid"></div>
       </div>
+
+      <div id="shortsSection" class="home-section hidden">
+        <h2 class="section-header" style="display:block;">Shorts</h2>
+        <div id="shortsGrid" class="shorts-grid"></div>
+      </div>
+
       <div id="watchLayout" class="watch-layout hidden">
         <div class="watch-left">
           <div class="watch-player">
@@ -615,7 +576,7 @@
             <div class="watch-channel">
               <div class="watch-channel-avatar"></div>
               <div>
-                <div id="watchChannelName"></div>
+                <div id="watchChannelName" style="font-weight:600; color:var(--text-primary);"></div>
                 <div id="watchViews" style="font-size:12px;color:var(--text-secondary);"></div>
               </div>
             </div>
@@ -624,18 +585,18 @@
                 <button id="embedYoutube" class="active">YouTube</button>
                 <button id="embedTheta">Ad-less</button>
               </div>
-              <button class="pill-btn">
+              <button id="likeBtn" class="pill-btn">
                 <span class="material-symbols-rounded" style="font-size:18px;">thumb_up</span>
-                <span>Like</span>
+                <span id="likeText">Like</span>
               </button>
               <button class="pill-btn">
-                <span class="material-symbols-rounded" style="font-size:18px;">thumb_down</span>
-                <span>Dislike</span>
+                <span class="material-symbols-rounded" style="font-size:18px;">share</span>
+                <span>Share</span>
               </button>
             </div>
           </div>
           <div id="watchDescription" class="watch-description">
-            Clean YouTube-style player with live search.
+            Description goes here.
           </div>
         </div>
         <div class="watch-right">
@@ -644,306 +605,366 @@
       </div>
     </section>
   </main>
+  
+  <div id="toast" class="toast">Notification</div>
+
   <script>
-    var searchInput = document.getElementById("searchInput");
-    var autocomplete = document.getElementById("autocomplete");
-    var menuToggle = document.getElementById("menuToggle");
-    var backdrop = document.getElementById("backdrop");
-    var sidebar = document.getElementById("sidebar");
-    var searchButton = document.getElementById("searchButton");
-    var homeSection = document.getElementById("homeSection");
-    var homeEmpty = document.getElementById("homeEmpty");
-    var resultsGrid = document.getElementById("resultsGrid");
-    var watchLayout = document.getElementById("watchLayout");
-    var mainPlayer = document.getElementById("mainPlayer");
-    var watchTitle = document.getElementById("watchTitle");
-    var watchChannelName = document.getElementById("watchChannelName");
-    var watchViews = document.getElementById("watchViews");
-    var watchDescription = document.getElementById("watchDescription");
-    var relatedList = document.getElementById("relatedList");
-    var embedYoutube = document.getElementById("embedYoutube");
-    var embedTheta = document.getElementById("embedTheta");
-    var currentResults = [];
-    var currentVideoIndex = -1;
-    var embedMode = "youtube";
-    var selectedIndex = -1;
-    var API_BASE = "/api/search";
-    function isMobile() {
-      return window.innerWidth <= 960;
+    const state = {
+      currentTab: 'home',
+      searchQuery: '',
+      currentVideo: null,
+      likedVideos: JSON.parse(localStorage.getItem('yt_liked')) || [],
+      history: JSON.parse(localStorage.getItem('yt_history')) || [],
+      subscriptions: ['TechDaily', 'Music Vevo', 'Gaming Hub', 'Daily Vlogs']
+    };
+
+    const els = {
+      searchInput: document.getElementById("searchInput"),
+      autocomplete: document.getElementById("autocomplete"),
+      backdrop: document.getElementById("backdrop"),
+      searchButton: document.getElementById("searchButton"),
+      mainSection: document.getElementById("mainSection"),
+      shortsSection: document.getElementById("shortsSection"),
+      watchLayout: document.getElementById("watchLayout"),
+      resultsGrid: document.getElementById("resultsGrid"),
+      shortsGrid: document.getElementById("shortsGrid"),
+      mainPlayer: document.getElementById("mainPlayer"),
+      pageTitle: document.getElementById("pageTitle"),
+      chips: document.querySelectorAll(".chip"),
+      sidebarItems: document.querySelectorAll(".sidebar-item"),
+      homeLogo: document.getElementById("homeLogo"),
+      toast: document.getElementById("toast"),
+      likeBtn: document.getElementById("likeBtn"),
+      likeText: document.getElementById("likeText")
+    };
+
+    const API_BASE = "/api/search";
+
+    function saveToHistory(video) {
+      state.history = state.history.filter(v => v.id !== video.id);
+      state.history.unshift(video);
+      if(state.history.length > 50) state.history.pop();
+      localStorage.setItem('yt_history', JSON.stringify(state.history));
     }
-    function applyResponsiveSidebar() {
-      var body = document.body;
-      if (isMobile()) {
-        body.classList.remove("sidebar-full");
-        body.classList.remove("sidebar-mini");
-        body.classList.remove("mobile-sidebar-open");
+
+    function toggleLike(video) {
+      const index = state.likedVideos.findIndex(v => v.id === video.id);
+      if (index === -1) {
+        state.likedVideos.unshift(video);
+        showToast("Added to Liked videos");
       } else {
-        body.classList.remove("mobile-sidebar-open");
-        if (window.innerWidth <= 1200) {
-          body.classList.remove("sidebar-full");
-          body.classList.add("sidebar-mini");
-        } else {
-          if (!body.classList.contains("sidebar-full") && !body.classList.contains("sidebar-mini")) {
-            body.classList.add("sidebar-full");
-          }
-        }
+        state.likedVideos.splice(index, 1);
+        showToast("Removed from Liked videos");
       }
+      localStorage.setItem('yt_liked', JSON.stringify(state.likedVideos));
+      updateLikeButtonState();
     }
-    applyResponsiveSidebar();
-    window.addEventListener("resize", applyResponsiveSidebar);
-    menuToggle.addEventListener("click", function() {
-      var body = document.body;
-      if (isMobile()) {
-        var isOpen = body.classList.toggle("mobile-sidebar-open");
-        if (!isOpen) {
-          body.classList.remove("mobile-sidebar-open");
-        }
-        return;
-      }
-      if (body.classList.contains("sidebar-full")) {
-        body.classList.remove("sidebar-full");
-        body.classList.add("sidebar-mini");
-      } else if (body.classList.contains("sidebar-mini")) {
-        body.classList.remove("sidebar-mini");
-        body.classList.add("sidebar-full");
+
+    function isLiked(videoId) {
+      return state.likedVideos.some(v => v.id === videoId);
+    }
+
+    function updateLikeButtonState() {
+      if (!state.currentVideo) return;
+      const liked = isLiked(state.currentVideo.id);
+      if (liked) {
+        els.likeBtn.classList.add("liked");
+        els.likeText.textContent = "Liked";
       } else {
-        body.classList.add("sidebar-full");
+        els.likeBtn.classList.remove("liked");
+        els.likeText.textContent = "Like";
       }
-    });
-    backdrop.addEventListener("click", function() {
-      document.body.classList.remove("mobile-sidebar-open");
-    });
-    sidebar.addEventListener("click", function(e) {
-      if (isMobile()) {
-        var item = e.target.closest(".sidebar-item");
-        if (item) {
-          document.body.classList.remove("mobile-sidebar-open");
-        }
-      }
-    });
-    function fetchSuggestions(query) {
-      var url = "https://api.datamuse.com/sug?s=" + encodeURIComponent(query);
-      return fetch(url)
-        .then(function(res) {
-          return res.json();
-        })
-        .then(function(data) {
-          return data.map(function(item) {
-            return item.word;
-          });
-        })
-        .catch(function() {
-          return [];
-        });
     }
-    function updateAutocomplete() {
-      var query = searchInput.value.trim();
-      autocomplete.innerHTML = "";
-      selectedIndex = -1;
-      if (!query) {
-        autocomplete.style.display = "none";
-        return;
-      }
-      fetchSuggestions(query).then(function(suggestions) {
-        if (!suggestions.length) {
-          autocomplete.style.display = "none";
-          return;
-        }
-        suggestions.forEach(function(text) {
-          var item = document.createElement("div");
-          item.className = "autocomplete-item";
-          item.innerHTML = '<span class="material-symbols-rounded">search</span>' + text;
-          item.addEventListener("click", function() {
-            searchInput.value = text;
-            autocomplete.style.display = "none";
-            performSearch();
-          });
-          autocomplete.appendChild(item);
-        });
-        autocomplete.style.display = "block";
+
+    function showToast(msg) {
+      els.toast.textContent = msg;
+      els.toast.classList.add("show");
+      setTimeout(() => els.toast.classList.remove("show"), 3000);
+    }
+
+    function switchTab(tabName, query = "") {
+      state.currentTab = tabName;
+      
+      els.mainSection.classList.add("hidden");
+      els.shortsSection.classList.add("hidden");
+      els.watchLayout.classList.add("hidden");
+      els.watchLayout.classList.remove("active");
+      
+      els.sidebarItems.forEach(item => {
+        if (item.dataset.page === tabName) item.classList.add("active");
+        else item.classList.remove("active");
       });
-    }
-    searchInput.addEventListener("input", updateAutocomplete);
-    searchInput.addEventListener("keydown", function(e) {
-      var items = autocomplete.querySelectorAll(".autocomplete-item");
-      if (!items.length) return;
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        selectedIndex = (selectedIndex + 1) % items.length;
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-      } else if (e.key === "Enter") {
-        if (selectedIndex >= 0) {
-          e.preventDefault();
-          searchInput.value = items[selectedIndex].innerText.trim();
-          autocomplete.style.display = "none";
-          performSearch();
-        } else {
-          performSearch();
-        }
-        return;
-      } else if (e.key === "Escape") {
-        autocomplete.style.display = "none";
-        return;
+
+      if (tabName === 'home' && !query) {
+        els.chips.forEach(c => c.classList.remove("active"));
+        els.chips[0].classList.add("active");
+      }
+
+      if (tabName === 'shorts') {
+        els.shortsSection.classList.remove("hidden");
+        loadShorts();
+      } else if (tabName === 'history') {
+        els.mainSection.classList.remove("hidden");
+        els.pageTitle.style.display = 'block';
+        els.pageTitle.textContent = "Watch History";
+        renderStorageGrid(state.history);
+      } else if (tabName === 'liked') {
+        els.mainSection.classList.remove("hidden");
+        els.pageTitle.style.display = 'block';
+        els.pageTitle.textContent = "Liked Videos";
+        renderStorageGrid(state.likedVideos);
+      } else if (tabName === 'library') {
+        els.mainSection.classList.remove("hidden");
+        els.pageTitle.style.display = 'block';
+        els.pageTitle.textContent = "Library";
+        const librarySet = new Set([...state.history, ...state.likedVideos].map(v => JSON.stringify(v)));
+        const libraryList = Array.from(librarySet).map(s => JSON.parse(s));
+        renderStorageGrid(libraryList);
+      } else if (tabName === 'subscriptions') {
+        els.mainSection.classList.remove("hidden");
+        els.pageTitle.style.display = 'block';
+        els.pageTitle.textContent = "Latest from Subscriptions";
+        performSearch("Tech Review");
       } else {
+        els.mainSection.classList.remove("hidden");
+        els.pageTitle.style.display = 'none';
+        performSearch(query);
+      }
+    }
+
+    function renderGrid(videos) {
+      els.resultsGrid.innerHTML = "";
+      if (!videos || videos.length === 0) {
+        els.resultsGrid.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">search_off</span><p>No videos found.</p></div>';
         return;
       }
-      items.forEach(function(item) {
-        item.classList.remove("active");
-      });
-      items[selectedIndex].classList.add("active");
-    });
-    document.addEventListener("click", function(e) {
-      var clickedInside = autocomplete.contains(e.target) || searchInput.contains(e.target);
-      if (!clickedInside) {
-        autocomplete.style.display = "none";
-      }
-    });
-    searchButton.addEventListener("click", function() {
-      performSearch();
-    });
-    searchInput.addEventListener("keydown", function(e) {
-      if (e.key === "Enter" && selectedIndex === -1) {
-        e.preventDefault();
-        performSearch();
-      }
-    });
-    function renderGrid(list) {
-      resultsGrid.innerHTML = "";
-      if (!list.length) {
-        resultsGrid.innerHTML = '<div class="empty-state">No videos found.</div>';
-        return;
-      }
-      list.forEach(function(video, index) {
-        var card = document.createElement("article");
+
+      videos.forEach((video, index) => {
+        const title = video.title || "Untitled Video";
+        const channel = video.channel || "Unknown Channel";
+        const views = video.views || "0 views";
+        const duration = video.duration || "";
+        const thumb = video.thumbnail || "";
+        const id = video.id || index;
+
+        const card = document.createElement("article");
         card.className = "video-card";
-        var thumbUrl = video.thumbnail || "";
-        var title = video.title || "";
-        var channel = video.channel || "";
-        var views = video.views || "";
-        var duration = video.duration || "";
-        card.innerHTML =
-          '<div class="thumbnail">' +
-          '<img src="' + thumbUrl + '" onerror="this.src=\'https://via.placeholder.com/320x180\'">' +
-          "</div>" +
-          '<div class="video-info">' +
-          '<div class="video-avatar"></div>' +
-          '<div class="video-meta">' +
-          '<h3 class="video-title">' + title + "</h3>" +
-          '<p class="video-channel">' + channel + "</p>" +
-          '<p class="video-stats">' + views + (duration ? " • " + duration : "") + "</p>" +
-          "</div>" +
-          "</div>";
-        card.addEventListener("click", function() {
-          openWatch(index);
-        });
-        resultsGrid.appendChild(card);
+        card.innerHTML = `
+          <div class="thumbnail">
+            <img src="${thumb}" onerror="this.src='https://via.placeholder.com/320x180?text=Video'">
+            ${duration ? `<div class="duration-badge">${duration}</div>` : ''}
+          </div>
+          <div class="video-info">
+            <div class="video-avatar"></div>
+            <div class="video-meta">
+              <h3 class="video-title">${title}</h3>
+              <p class="video-channel">${channel}</p>
+              <p class="video-stats">${views} ${duration ? '• ' + duration : ''}</p>
+            </div>
+          </div>
+        `;
+        card.addEventListener("click", () => openWatch(video));
+        els.resultsGrid.appendChild(card);
       });
     }
-    function performSearch() {
-      var query = searchInput.value.trim();
-      if (!query) {
-        loadRecommended();
+
+    function renderStorageGrid(videos) {
+      renderGrid(videos);
+    }
+
+    function renderShorts(videos) {
+      els.shortsGrid.innerHTML = "";
+      if (!videos || videos.length === 0) {
+        els.shortsGrid.innerHTML = '<div class="empty-state">No shorts found.</div>';
         return;
       }
-      homeEmpty.style.display = "none";
-      resultsGrid.innerHTML = '<div class="loader"></div>';
-      fetch(API_BASE + "?query=" + encodeURIComponent(query))
-        .then(function(res) {
-          return res.json();
+
+      videos.forEach(video => {
+        const card = document.createElement("article");
+        card.className = "shorts-card";
+        card.innerHTML = `
+          <div class="thumbnail">
+            <img src="${video.thumbnail}" onerror="this.src='https://via.placeholder.com/320x568?text=Shorts'">
+          </div>
+          <div class="video-meta">
+            <h3 class="video-title">${video.title}</h3>
+          </div>
+        `;
+        card.addEventListener("click", () => openWatch(video));
+        els.shortsGrid.appendChild(card);
+      });
+    }
+
+    function performSearch(query) {
+      state.searchQuery = query;
+      els.resultsGrid.innerHTML = '<div class="loader"></div>';
+      els.mainEmpty.style.display = "none";
+
+      const searchParam = query ? encodeURIComponent(query) : "";
+
+      fetch(API_BASE + "?query=" + searchParam)
+        .then(res => res.json())
+        .then(data => {
+          const videos = data.results || [];
+          if(state.currentTab === 'shorts') {
+            renderShorts(videos);
+          } else {
+            renderGrid(videos);
+          }
         })
-        .then(function(data) {
-          currentResults = data.results || [];
-          renderGrid(currentResults);
-          homeSection.classList.remove("hidden");
-          watchLayout.classList.add("hidden");
-        })
-        .catch(function() {
-          resultsGrid.innerHTML = '<div class="empty-state">Error loading results.</div>';
+        .catch(err => {
+          console.error(err);
+          els.resultsGrid.innerHTML = '<div class="empty-state">Error loading results. Is the backend running?</div>';
         });
     }
-    function openWatch(index) {
-      if (!currentResults.length || !currentResults[index]) return;
-      currentVideoIndex = index;
-      var video = currentResults[index];
-      var id = video.id;
-      var title = video.title || "";
-      var channel = video.channel || "YouTube";
-      var views = video.views || "";
-      watchTitle.textContent = title;
-      watchChannelName.textContent = channel;
-      watchViews.textContent = views;
-      watchDescription.textContent = "Playing: " + title + "\nChannel: " + channel;
-      setEmbedMode(embedMode, id);
-      renderRelated(index);
-      homeSection.classList.add("hidden");
-      watchLayout.classList.remove("hidden");
-      watchLayout.classList.add("active");
+
+    function loadShorts() {
+      performSearch("shorts");
+    }
+
+    function openWatch(video) {
+      state.currentVideo = video;
+      
+      saveToHistory(video);
+
+      els.mainSection.classList.add("hidden");
+      els.shortsSection.classList.add("hidden");
+      els.watchLayout.classList.remove("hidden");
+      els.watchLayout.classList.add("active");
+
+      document.getElementById("watchTitle").textContent = video.title;
+      document.getElementById("watchChannelName").textContent = video.channel || "Channel Name";
+      document.getElementById("watchViews").textContent = video.views || "0 views";
+      document.getElementById("watchDescription").textContent = `Description for: ${video.title}\n\nThis is a simulated description.`;
+      
+      setEmbedMode("youtube", video.id);
+
+      updateLikeButtonState();
+
+      loadRelated(state.searchQuery || "related");
+      
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-    function renderRelated(activeIndex) {
-      relatedList.innerHTML = "";
-      currentResults.forEach(function(video, index) {
-        if (index === activeIndex) return;
-        var item = document.createElement("div");
-        item.className = "related-item";
-        var thumbUrl = video.thumbnail || "";
-        var title = video.title || "";
-        var channel = video.channel || "";
-        var views = video.views || "";
-        var duration = video.duration || "";
-        item.innerHTML =
-          '<div class="related-thumb">' +
-          '<img src="' + thumbUrl + '" onerror="this.src=\'https://via.placeholder.com/168x94\'">' +
-          "</div>" +
-          '<div class="related-info">' +
-          '<div class="related-title">' + title + "</div>" +
-          '<div class="related-channel">' + channel + "</div>" +
-          '<div class="related-stats">' + views + (duration ? " • " + duration : "") + "</div>" +
-          "</div>";
-        item.addEventListener("click", function() {
-          openWatch(index);
+
+    function loadRelated(query) {
+      fetch(API_BASE + "?query=" + encodeURIComponent(query))
+        .then(res => res.json())
+        .then(data => {
+          const videos = data.results || [];
+          const container = document.getElementById("relatedList");
+          container.innerHTML = "";
+          
+          videos.forEach(video => {
+            if(video.id === state.currentVideo.id) return;
+
+            const item = document.createElement("div");
+            item.className = "related-item";
+            item.innerHTML = `
+              <div class="related-thumb">
+                <img src="${video.thumbnail}" onerror="this.src='https://via.placeholder.com/168x94'">
+              </div>
+              <div class="related-info">
+                <div class="related-title">${video.title}</div>
+                <div class="related-channel">${video.channel}</div>
+                <div class="related-stats">${video.views}</div>
+              </div>
+            `;
+            item.addEventListener("click", () => openWatch(video));
+            container.appendChild(item);
+          });
         });
-        relatedList.appendChild(item);
-      });
     }
+
     function setEmbedMode(mode, id) {
-      embedMode = mode;
-      embedYoutube.classList.remove("active");
-      embedTheta.classList.remove("active");
+      const player = document.getElementById("mainPlayer");
+      const btnYt = document.getElementById("embedYoutube");
+      const btnTheta = document.getElementById("embedTheta");
+      
+      btnYt.classList.remove("active");
+      btnTheta.classList.remove("active");
+
       if (mode === "youtube") {
-        embedYoutube.classList.add("active");
-        mainPlayer.src = "https://www.youtube.com/embed/" + id + "?autoplay=1&rel=0&modestbranding=1";
+        btnYt.classList.add("active");
+        player.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
       } else {
-        embedTheta.classList.add("active");
-        mainPlayer.src = "https://thetacloud.org/yt/#" + id;
+        btnTheta.classList.add("active");
+        player.src = `https://thetacloud.org/yt/#${id}`;
       }
     }
-    embedYoutube.addEventListener("click", function() {
-      if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
-      setEmbedMode("youtube", currentResults[currentVideoIndex].id);
+
+    els.searchButton.addEventListener("click", () => {
+      switchTab('search', els.searchInput.value);
     });
-    embedTheta.addEventListener("click", function() {
-      if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
-      setEmbedMode("thetacloud", currentResults[currentVideoIndex].id);
+    els.searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") switchTab('search', els.searchInput.value);
     });
-    function loadRecommended() {
-      resultsGrid.innerHTML = '<div class="loader"></div>';
-      fetch(API_BASE + "?query=" + encodeURIComponent("vlogs"))
-        .then(function(res) {
-          return res.json();
-        })
-        .then(function(data) {
-          currentResults = data.results || [];
-          renderGrid(currentResults);
-        })
-        .catch(function() {
-          resultsGrid.innerHTML = '<div class="empty-state">Error loading recommended videos.</div>';
+
+    els.chips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        els.chips.forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        
+        const query = chip.dataset.query;
+        els.searchInput.value = query;
+        switchTab('search', query);
+      });
+    });
+
+    els.sidebarItems.forEach(item => {
+      item.addEventListener("click", () => {
+        const page = item.dataset.page;
+        if (page) switchTab(page);
+      });
+    });
+
+    els.homeLogo.addEventListener("click", () => switchTab('home'));
+
+    els.likeBtn.addEventListener("click", () => {
+      if (state.currentVideo) toggleLike(state.currentVideo);
+    });
+
+    document.getElementById("embedYoutube").addEventListener("click", () => {
+      if (state.currentVideo) setEmbedMode("youtube", state.currentVideo.id);
+    });
+    document.getElementById("embedTheta").addEventListener("click", () => {
+      if (state.currentVideo) setEmbedMode("thetacloud", state.currentVideo.id);
+    });
+
+    els.backdrop.addEventListener("click", () => {
+      document.body.classList.remove("mobile-sidebar-open");
+    });
+
+    function updateAutocomplete() {
+      const query = els.searchInput.value.trim();
+      els.autocomplete.innerHTML = "";
+      if (!query) { els.autocomplete.style.display = "none"; return; }
+
+      fetch("https://api.datamuse.com/sug?s=" + encodeURIComponent(query))
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "autocomplete-item";
+            div.innerHTML = `<span class="material-symbols-rounded">search</span> ${item.word}`;
+            div.addEventListener("click", () => {
+              els.searchInput.value = item.word;
+              els.autocomplete.style.display = "none";
+              switchTab('search', item.word);
+            });
+            els.autocomplete.appendChild(div);
+          });
+          els.autocomplete.style.display = "block";
         });
     }
-    window.addEventListener("load", function() {
-      loadRecommended();
+    els.searchInput.addEventListener("input", updateAutocomplete);
+    document.addEventListener("click", (e) => {
+      if (!els.autocomplete.contains(e.target) && e.target !== els.searchInput) {
+        els.autocomplete.style.display = "none";
+      }
+    });
+
+    window.addEventListener("load", () => {
+      switchTab('home');
     });
   </script>
 </body>
