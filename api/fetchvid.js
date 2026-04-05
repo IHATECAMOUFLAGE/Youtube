@@ -5,7 +5,7 @@ let innertubeInstance = null;
 
 const getInnertube = async () => {
   if (!innertubeInstance) {
-    const PROXY_URL = '100.25.218.67:5123';
+    const PROXY_URL = 'https://139.59.93.221:41094';
     
     const agent = PROXY_URL !== 'placeholder' ? new HttpsProxyAgent(PROXY_URL) : undefined;
 
