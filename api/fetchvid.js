@@ -1,23 +1,5 @@
-import { Innertube, UniversalCache } from 'youtubei.js';
+import { Innertube } from 'youtubei.js';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-
-let innertubeInstance = null;
-
-const getInnertube = async () => {
-  if (!innertubeInstance) {
-    const PROXY_URL = 'http://139.59.93.221:41094';
-    const agent = new HttpsProxyAgent(PROXY_URL);
-
-    innertubeInstance = await Innertube.create({
-      cache: new UniversalCache(false),
-      client: 'TV_EMBEDDED',
-      request_options: {
-        agent: agent
-      }
-    });
-  }
-  return innertubeInstance;
-};
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -39,9 +21,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    const yt = await getInnertube();
+    const proxyRes = await fetch('https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=ipport&format=text');
+    const proxyText = await proxyRes.text();
+    const proxies = proxyText.trim().split('\n').filter(p => p.length > 0);
+
+    if (proxies.length === 0) {
+      return res.status(500).json({ error: 'No proxies available' });
+    }
+
+    const randomProxy = proxies[Math.floor(Math.random() * proxies.length)];
+    const proxyUrl = `http://${randomProxy}`;
+    const agent = new HttpsProxyAgent(proxyUrl);
+
+    const yt = await Innertube.create({
+      cache: undefined,
+      client: 'TV_EMBEDDED',
+      request_options: {
+        agent: agent,
+        timeout: 8000
+      }
+    });
+
     const info = await yt.getInfo(id);
-    
     const streamingData = info.streaming_data;
 
     if (!streamingData) {
@@ -72,9 +73,9 @@ export default async function handler(req, res) {
     res.status(200).json(response);
 
   } catch (error) {
-    console.error('youtubei.js Error:', error.message);
+    console.error('Error:', error.message);
     res.status(500).json({ 
-      error: 'Failed to fetch video info.',
+      error: 'Failed to fetch video info. The random proxy might be dead.',
       details: error.message 
     });
   }
