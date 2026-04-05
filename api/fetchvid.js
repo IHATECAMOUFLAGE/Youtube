@@ -5,9 +5,9 @@ let innertubeInstance = null;
 
 const getInnertube = async () => {
   if (!innertubeInstance) {
-    const PROXY_URL = 'YOUR_PROXY_URL_HERE';
+    const PROXY_URL = '100.25.218.67:5123';
     
-    const agent = PROXY_URL !== 'YOUR_PROXY_URL_HERE' ? new HttpsProxyAgent(PROXY_URL) : undefined;
+    const agent = PROXY_URL !== 'placeholder' ? new HttpsProxyAgent(PROXY_URL) : undefined;
 
     innertubeInstance = await Innertube.create({
       cache: new UniversalCache(false),
