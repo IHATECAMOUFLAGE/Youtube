@@ -1,5 +1,5 @@
-import { Innertube, UniversalCache } from 'youtubei.js';
-import { HttpsProxyAgent } from 'https-proxy-agent';
+import { Innertube, UniversalCache } from "youtubei.js";
+import { HttpsProxyAgent } from "https-proxy-agent";
 
 const PROXY_POOL = [
   "http://116.80.65.77:3172",
@@ -103,38 +103,93 @@ const PROXY_POOL = [
   "http://38.145.203.39:8445"
 ];
 
-const CLIENTS = [
-  "ANDROID",
-  "ANDROID_EMBEDDED",
-  "WEB_REMIX",
-  "TV_EMBEDDED"
-];
+const CLIENTS = ["ANDROID", "ANDROID_EMBEDDED", "WEB_REMIX", "TV_EMBEDDED"];
 
 const getRandomProxy = () => {
   const proxy = PROXY_POOL[Math.floor(Math.random() * PROXY_POOL.length)];
   return new HttpsProxyAgent(proxy);
 };
 
-async function tryClient(client, videoId) {
+async function tryInvidious(id) {
+  try {
+    const r = await fetch(`https://yewtu.be/api/v1/videos/${id}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.formatStreams) return null;
+    return {
+      title: j.title,
+      author: j.author,
+      thumbnail: j.videoThumbnails?.[0]?.url || null,
+      duration: j.lengthSeconds,
+      streamUrl: j.formatStreams?.[0]?.url || null,
+      quality: j.formatStreams?.[0]?.quality || "unknown"
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function tryPiped(id) {
+  try {
+    const r = await fetch(`https://pipedapi.kavin.rocks/streams/${id}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.videoStreams) return null;
+    return {
+      title: j.title,
+      author: j.uploader,
+      thumbnail: j.thumbnailUrl,
+      duration: j.duration,
+      streamUrl: j.videoStreams?.[0]?.url || null,
+      quality: j.videoStreams?.[0]?.quality || "unknown"
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function tryNewPipe(id) {
+  try {
+    const r = await fetch(`https://newpipeapi.org/api/v1/video/${id}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.videoStreams) return null;
+    return {
+      title: j.title,
+      author: j.uploader,
+      thumbnail: j.thumbnail,
+      duration: j.duration,
+      streamUrl: j.videoStreams?.[0]?.url || null,
+      quality: j.videoStreams?.[0]?.quality || "unknown"
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function tryInnertube(client, id) {
   try {
     const yt = await Innertube.create({
       cache: new UniversalCache(false),
       client,
-      request_options: {
-        agent: getRandomProxy(),
-        timeout: 8000
-      }
+      request_options: { agent: getRandomProxy(), timeout: 8000 }
     });
-
-    const info = await yt.getInfo(videoId);
-
-    if (!info.streaming_data) {
-      return { ok: false };
-    }
-
-    return { ok: true, info };
+    const info = await yt.getInfo(id);
+    if (!info.streaming_data) return null;
+    let best = info.streaming_data.adaptive_formats
+      .filter(f => f.mime_type.includes("video/mp4"))
+      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+    if (!best) best = info.streaming_data.adaptive_formats[0];
+    return {
+      title: info.basic_info.title,
+      author: info.basic_info.author,
+      thumbnail: info.basic_info.thumbnail[0].url,
+      duration: info.basic_info.duration,
+      streamUrl: best?.url || null,
+      quality: best?.quality_label || "unknown"
+    };
   } catch {
-    return { ok: false };
+    return null;
   }
 }
 
@@ -149,32 +204,19 @@ export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: "Missing \"id\" query parameter" });
 
+  const inv = await tryInvidious(id);
+  if (inv) return res.status(200).json(inv);
+
+  const pip = await tryPiped(id);
+  if (pip) return res.status(200).json(pip);
+
+  const np = await tryNewPipe(id);
+  if (np) return res.status(200).json(np);
+
   for (const client of CLIENTS) {
-    const result = await tryClient(client, id);
-
-    if (result.ok) {
-      const info = result.info;
-      const streamingData = info.streaming_data;
-
-      let bestFormat = streamingData.adaptive_formats
-        .filter(f => f.mime_type.includes("video/mp4"))
-        .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-
-      if (!bestFormat) bestFormat = streamingData.adaptive_formats[0];
-
-      return res.status(200).json({
-        clientUsed: client,
-        title: info.basic_info.title,
-        author: info.basic_info.author,
-        thumbnail: info.basic_info.thumbnail[0].url,
-        duration: info.basic_info.duration,
-        streamUrl: bestFormat?.url || null,
-        quality: bestFormat?.quality_label || "unknown"
-      });
-    }
+    const it = await tryInnertube(client, id);
+    if (it) return res.status(200).json(it);
   }
 
-  res.status(500).json({
-    error: "All clients failed."
-  });
+  res.status(500).json({ error: "All sources failed" });
 }
