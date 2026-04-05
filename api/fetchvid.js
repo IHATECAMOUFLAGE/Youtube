@@ -6,7 +6,8 @@ const getInnertube = async () => {
   if (!innertubeInstance) {
     innertubeInstance = await Innertube.create({
       cache: new UniversalCache(false),
-      client: 'ANDROID'
+      client: 'TV_EMBEDDED',
+      generate_session_locally: true
     });
   }
   return innertubeInstance;
