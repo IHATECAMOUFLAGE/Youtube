@@ -1,4 +1,4 @@
-import { Innertube, UniversalCache } from '@distube/youtubei.js';
+import { Innertube, UniversalCache } from 'youtubei.js';
 
 let innertubeInstance = null;
 
