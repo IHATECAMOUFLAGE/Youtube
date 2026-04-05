@@ -21,29 +21,46 @@ export default async function handler(req, res) {
 
   try {
     const videoUrl = `https://www.youtube.com/watch?v=${id}`;
-
-    if (!ytdl.validateURL(videoUrl)) {
-      return res.status(400).json({ error: 'Invalid YouTube Video ID' });
-    }
-
-    const info = await ytdl.getInfo(videoUrl);
-
-    const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
     
+    const options = {
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      }
+    };
+
+    const info = await ytdl.getInfo(videoUrl, options);
+    
+    const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
     const bestFormat = formats.length > 0 ? formats[0] : null;
 
-    const responseData = {
+    if (!bestFormat) {
+      const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
+      const videoFormats = ytdl.filterFormats(info.formats, 'videoonly');
+      
+      if (!audioFormats.length && !videoFormats.length) {
+         return res.status(500).json({ error: 'No streamable formats found' });
+      }
+    }
+
+    res.status(200).json({
       title: info.videoDetails.title,
       author: info.videoDetails.author.name,
       thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url,
       duration: info.videoDetails.lengthSeconds,
-      streamUrl: bestFormat ? bestFormat.url : null
-    };
-
-    res.status(200).json(responseData);
+      streamUrl: bestFormat ? bestFormat.url : null 
+    });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch video info' });
+    console.error('Detailed Error:', error.message);
+    
+    if (error.message && error.message.includes('Sign in')) {
+      return res.status(403).json({ 
+        error: 'YouTube is blocking this request (Bot detection). This is a common issue on free hosting.' 
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to fetch video info. The video ID might be invalid, or YouTube blocked the server IP.' });
   }
 }
