@@ -1,6 +1,3 @@
-// Make sure to run: npm install node-fetch@2
-const fetch = require("node-fetch");
-
 async function fetchFromDownr(videoUrl) {
   try {
     const response = await fetch("https://downr.org/.netlify/functions/nyt", {
@@ -8,6 +5,7 @@ async function fetchFromDownr(videoUrl) {
       headers: {
         "Content-Type": "application/json",
         "Origin": "https://downr.org",
+        // We add a User-Agent so the API thinks this is a standard browser request
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
       },
       body: JSON.stringify({ url: videoUrl })
@@ -26,6 +24,6 @@ async function fetchFromDownr(videoUrl) {
 }
 
 // Usage
-fetchFromDownr("https://www.youtube.com/watch?v=DXVHmGoCTco")
+fetchFromDownr("SOME_VIDEO_URL_HERE")
   .then(data => console.log(data))
   .catch(err => console.error(err));
