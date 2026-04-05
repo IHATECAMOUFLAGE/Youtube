@@ -5,13 +5,12 @@ let innertubeInstance = null;
 
 const getInnertube = async () => {
   if (!innertubeInstance) {
-    const PROXY_URL = 'https://139.59.93.221:41094';
-    
-    const agent = PROXY_URL !== 'placeholder' ? new HttpsProxyAgent(PROXY_URL) : undefined;
+    const PROXY_URL = 'http://139.59.93.221:41094';
+    const agent = new HttpsProxyAgent(PROXY_URL);
 
     innertubeInstance = await Innertube.create({
       cache: new UniversalCache(false),
-      client: 'ANDROID',
+      client: 'TV_EMBEDDED',
       request_options: {
         agent: agent
       }
