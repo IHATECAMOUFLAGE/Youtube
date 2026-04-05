@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "node-fetch": "3.3.2",
-    "youtubei.js": "^10.2.0"
+    "youtubei.js": "^10.2.0",
+    "https-proxy-agent": "^7.0.5"
   }
 }
