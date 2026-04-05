@@ -1,4 +1,15 @@
-import ytdl from '@distube/ytdl-core';
+import { Innertube, UniversalCache } from '@distube/youtubei.js';
+
+let innertubeInstance = null;
+
+const getInnertube = async () => {
+  if (!innertubeInstance) {
+    innertubeInstance = await Innertube.create({
+      cache: new UniversalCache(false)
+    });
+  }
+  return innertubeInstance;
+};
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -20,47 +31,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    const videoUrl = `https://www.youtube.com/watch?v=${id}`;
+    const yt = await getInnertube();
+    const info = await yt.getInfo(id);
+    const streamingData = info.streaming_data;
     
-    const options = {
-      requestOptions: {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-      }
+    if (!streamingData) {
+      return res.status(404).json({ error: 'No streaming data found. Video might be region locked or private.' });
+    }
+
+    let bestFormat = streamingData.adaptive_formats
+      .filter(format => format.mime_type.includes('video/mp4'))
+      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+
+    if (!bestFormat && streamingData.adaptive_formats.length > 0) {
+       bestFormat = streamingData.adaptive_formats[0];
+    }
+
+    const response = {
+      title: info.basic_info.title,
+      author: info.basic_info.author,
+      thumbnail: info.basic_info.thumbnail[0].url,
+      duration: info.basic_info.duration,
+      streamUrl: bestFormat ? bestFormat.url : null,
+      quality: bestFormat ? bestFormat.quality_label : 'unknown'
     };
 
-    const info = await ytdl.getInfo(videoUrl, options);
-    
-    const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
-    const bestFormat = formats.length > 0 ? formats[0] : null;
-
-    if (!bestFormat) {
-      const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
-      const videoFormats = ytdl.filterFormats(info.formats, 'videoonly');
-      
-      if (!audioFormats.length && !videoFormats.length) {
-         return res.status(500).json({ error: 'No streamable formats found' });
-      }
-    }
-
-    res.status(200).json({
-      title: info.videoDetails.title,
-      author: info.videoDetails.author.name,
-      thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url,
-      duration: info.videoDetails.lengthSeconds,
-      streamUrl: bestFormat ? bestFormat.url : null 
-    });
+    res.status(200).json(response);
 
   } catch (error) {
-    console.error('Detailed Error:', error.message);
-    
-    if (error.message && error.message.includes('Sign in')) {
-      return res.status(403).json({ 
-        error: 'YouTube is blocking this request (Bot detection). This is a common issue on free hosting.' 
-      });
-    }
-
-    res.status(500).json({ error: 'Failed to fetch video info. The video ID might be invalid, or YouTube blocked the server IP.' });
+    console.error('youtubei.js Error:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch video info via Innertube.',
+      details: error.message 
+    });
   }
 }
