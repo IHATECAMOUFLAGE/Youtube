@@ -7,6 +7,6 @@
   },
   "dependencies": {
     "node-fetch": "3.3.2",
-    "@distube/ytdl-core": "^4.2.3"
+    "@distube/youtubei.js": "^10.2.0"
   }
 }
