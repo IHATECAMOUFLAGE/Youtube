@@ -24,6 +24,6 @@ async function fetchFromDownr(videoUrl) {
 }
 
 // Usage
-fetchFromDownr("SOME_VIDEO_URL_HERE")
+fetchFromDownr("https://www.youtube.com/watch?v=DXVHmGoCTco&vl=en")
   .then(data => console.log(data))
   .catch(err => console.error(err));
