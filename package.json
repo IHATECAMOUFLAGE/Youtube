@@ -7,6 +7,6 @@
   },
   "dependencies": {
     "node-fetch": "3.3.2",
-    "@distube/youtubei.js": "^10.2.0"
+    "youtubei.js": "^10.2.0"
   }
 }
