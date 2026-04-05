@@ -1,16 +1,31 @@
+// Make sure to run: npm install node-fetch@2
+const fetch = require("node-fetch");
+
 async function fetchFromDownr(videoUrl) {
-  const response = await fetch("https://downr.org/.netlify/functions/nyt", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Origin": "https://downr.org"
-    },
-    body: JSON.stringify({ url: videoUrl })
-  });
+  try {
+    const response = await fetch("https://downr.org/.netlify/functions/nyt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Origin": "https://downr.org",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      },
+      body: JSON.stringify({ url: videoUrl })
+    });
 
-  if (!response.ok) {
-    throw new Error("Downr backend returned an error");
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Downr backend returned error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Failed to fetch from Downr:", error);
+    throw error;
   }
-
-  return response.json();
 }
+
+// Usage
+fetchFromDownr("https://www.youtube.com/watch?v=DXVHmGoCTco")
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
