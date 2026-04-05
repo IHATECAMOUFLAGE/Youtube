@@ -5,7 +5,8 @@ let innertubeInstance = null;
 const getInnertube = async () => {
   if (!innertubeInstance) {
     innertubeInstance = await Innertube.create({
-      cache: new UniversalCache(false)
+      cache: new UniversalCache(false),
+      client: 'ANDROID'
     });
   }
   return innertubeInstance;
@@ -33,10 +34,15 @@ export default async function handler(req, res) {
   try {
     const yt = await getInnertube();
     const info = await yt.getInfo(id);
-    const streamingData = info.streaming_data;
     
+    const streamingData = info.streaming_data;
+
     if (!streamingData) {
-      return res.status(404).json({ error: 'No streaming data found. Video might be region locked or private.' });
+      return res.status(403).json({ 
+        error: 'Streaming data blocked by YouTube.',
+        status: info.playability_status.status,
+        reason: info.playability_status.reason 
+      });
     }
 
     let bestFormat = streamingData.adaptive_formats
@@ -61,7 +67,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('youtubei.js Error:', error.message);
     res.status(500).json({ 
-      error: 'Failed to fetch video info via Innertube.',
+      error: 'Failed to fetch video info.',
       details: error.message 
     });
   }
