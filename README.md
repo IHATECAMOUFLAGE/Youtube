@@ -1,5 +1,4 @@
-Make the liscense follow this new readme:
-# YouTube Clone (Custom Frontend)
+# Infared - Alternative Youtube Frontend
 
 This project is a custom Alternative youtube frontend built for educational and personal use.
 
