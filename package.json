@@ -10,7 +10,7 @@
     "youtubei.js": "^10.2.0",
     "https-proxy-agent": "^7.0.5",
     "got-scraping": "^4.0.4",
-    "puppeteer": "^22.0.0",
+    "puppeteer-core": "^22.0.0",
     "chrome-aws-lambda": "^10.1.0"
   }
 }
