@@ -1,53 +1,49 @@
-import { gotScraping } from 'got-scraping';
+import puppeteer from "puppeteer";
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader("Access-Control-Allow-Credentials", true);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'Missing "url" query parameter' });
 
   try {
-    const baseOptions = {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9"
-      },
-      retry: { limit: 5 }
-    };
-    
-    const videoResp = await gotScraping.post("https://downr.org/.netlify/functions/nyt", {
-      ...baseOptions,
-      responseType: 'json',
-      headers: {
-        ...baseOptions.headers,
-        "Content-Type": "application/json",
-        "Origin": "https://downr.org",
-        "Referer": "https://downr.org/"
-      },
-      json: { url: url }
+    const browser = await puppeteer.launch({
+      headless: "new"
     });
 
-    if (videoResp.statusCode !== 200) {
-      return res.status(videoResp.statusCode).json({ 
-        error: "Downr backend returned an error", 
-        details: videoResp.body 
-      });
-    }
+    const page = await browser.newPage();
 
-    return res.status(200).json(videoResp.body);
+    await page.goto("https://downr.org", {
+      waitUntil: "networkidle2"
+    });
+
+    const result = await page.evaluate(async (targetUrl) => {
+      const response = await fetch("https://downr.org/.netlify/functions/nyt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ url: targetUrl })
+      });
+
+      return await response.json();
+    }, url);
+
+    await browser.close();
+
+    return res.status(200).json(result);
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ 
-      error: "Internal Server Error", 
-      message: error.message 
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: error.message
     });
   }
 }
