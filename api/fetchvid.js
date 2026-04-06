@@ -1,8 +1,6 @@
-import fetch from 'node-fetch';
-import { HttpsProxyAgent } from 'https-proxy-agent';
+import { gotScraping } from 'got-scraping';
 
 const PROXY_URL = "http://xjtnujpf:b3pzt68plr0c@31.59.20.176:6754";
-const httpsAgent = new HttpsProxyAgent(PROXY_URL);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -16,58 +14,45 @@ export default async function handler(req, res) {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'Missing "url" query parameter' });
 
-  const headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Upgrade-Insecure-Requests": "1"
-  };
-
-  const fetchWithCookies = async (url, options = {}) => {
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-        "Cookie": cookieString
-      },
-      agent: httpsAgent
-    });
-  };
-
-  let cookieString = "";
+  let cookieJar = {};
 
   try {
-    const homeResp = await fetchWithCookies("https://downr.org/");
-    const rawHeaders = homeResp.headers.raw();
-    const cookies = rawHeaders['set-cookie'] || [];
-    
-    if (cookies.length > 0) {
-      cookieString = cookies.join('; ');
-    }
-
-    await fetchWithCookies("https://downr.org/.netlify/functions/analytics");
-
-    const videoResp = await fetchWithCookies("https://downr.org/.netlify/functions/nyt", {
-      method: "POST",
+    const options = {
+      proxyUrl: PROXY_URL,
       headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Upgrade-Insecure-Requests": "1"
+      },
+      cookieJar: cookieJar,
+      responseType: 'json',
+      throwHttpErrors: false,
+      retry: 0
+    };
+
+    await gotScraping.get("https://downr.org/", options);
+    await gotScraping.get("https://downr.org/.netlify/functions/analytics", options);
+
+    const videoResp = await gotScraping.post("https://downr.org/.netlify/functions/nyt", {
+      ...options,
+      headers: {
+        ...options.headers,
         "Content-Type": "application/json",
         "Origin": "https://downr.org",
         "Referer": "https://downr.org/"
       },
-      body: JSON.stringify({ url: url })
+      json: { url: url }
     });
 
-    const responseText = await videoResp.text();
-
-    if (!videoResp.ok) {
-      return res.status(videoResp.status).json({ 
+    if (videoResp.statusCode !== 200) {
+      return res.status(videoResp.statusCode).json({ 
         error: "Downr backend returned an error", 
-        details: responseText 
+        details: videoResp.body 
       });
     }
 
-    return res.status(200).json(JSON.parse(responseText));
+    return res.status(200).json(videoResp.body);
 
   } catch (error) {
     return res.status(500).json({ 
