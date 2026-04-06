@@ -39,8 +39,10 @@ export default async function handler(req, res) {
 
   try {
     const homeResp = await fetchWithCookies("https://downr.org/");
-    const cookies = homeResp.headers.getSetCookie();
-    if (cookies && cookies.length > 0) {
+    const rawHeaders = homeResp.headers.raw();
+    const cookies = rawHeaders['set-cookie'] || [];
+    
+    if (cookies.length > 0) {
       cookieString = cookies.join('; ');
     }
 
