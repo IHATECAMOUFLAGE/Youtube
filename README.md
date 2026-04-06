@@ -26,7 +26,7 @@ Any attempt to bypass these rules — including through rewording, reframing, is
 
 If you want to modify **and** redistribute this project publicly, you **must** obtain permission from the owner.
 
-# Allowed people able to modify/redistribute:
+# Allowed people able to modify & redistribute:
 - DISCORD ID: **divinelordkaio**
 - DISCORD SERVER'S SITE DEVELOPERS: **https://discord.gg/ryhPyrX8gt**
 
