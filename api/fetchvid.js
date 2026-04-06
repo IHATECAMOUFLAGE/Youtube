@@ -18,13 +18,28 @@ export default async function handler(req, res) {
   try {
     const response = await fetch("https://downr.org/.netlify/functions/nyt", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://downr.org",
+        "Referer": "https://downr.org/"
+      },
       body: JSON.stringify({ url })
     });
 
-    const data = await response.json();
+    const text = await response.text();
 
-    return res.status(200).json(data);
+    try {
+      const json = JSON.parse(text);
+      return res.status(200).json(json);
+    } catch {
+      return res.status(500).json({
+        error: "Invalid JSON from Downr",
+        raw: text
+      });
+    }
 
   } catch (err) {
     console.error("Fetch error:", err);
