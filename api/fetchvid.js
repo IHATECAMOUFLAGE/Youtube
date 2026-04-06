@@ -1,4 +1,4 @@
-import playwright from "@playwright/browser-chromium";
+import { fetch } from "undici";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,32 +16,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const browser = await playwright.launch({
-      headless: true
+    const response = await fetch("https://downr.org/.netlify/functions/nyt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
     });
 
-    const page = await browser.newPage();
+    const data = await response.json();
 
-    await page.goto("https://downr.org", {
-      waitUntil: "networkidle"
-    });
-
-    const result = await page.evaluate(async (targetUrl) => {
-      const response = await fetch("https://downr.org/.netlify/functions/nyt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: targetUrl })
-      });
-
-      return await response.json();
-    }, url);
-
-    await browser.close();
-
-    return res.status(200).json(result);
+    return res.status(200).json(data);
 
   } catch (err) {
-    console.error("Playwright error:", err);
+    console.error("Fetch error:", err);
     return res.status(500).json({
       error: "Internal Server Error",
       message: err.message
