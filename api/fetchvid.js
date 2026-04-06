@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import chromium from "chrome-aws-lambda";
+import puppeteer from "puppeteer-core";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Credentials", true);
@@ -13,22 +14,23 @@ export default async function handler(req, res) {
   if (!url) return res.status(400).json({ error: 'Missing "url" query parameter' });
 
   try {
+    const executablePath = await chromium.executablePath;
+
     const browser = await puppeteer.launch({
-      headless: "new"
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath,
+      headless: chromium.headless
     });
 
     const page = await browser.newPage();
 
-    await page.goto("https://downr.org", {
-      waitUntil: "networkidle2"
-    });
+    await page.goto("https://downr.org", { waitUntil: "networkidle2" });
 
     const result = await page.evaluate(async (targetUrl) => {
       const response = await fetch("https://downr.org/.netlify/functions/nyt", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: targetUrl })
       });
 
