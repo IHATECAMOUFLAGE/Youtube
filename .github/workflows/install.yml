@@ -1,30 +1,34 @@
-name: Install Dependencies
+name: build
 
-on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+on: [ push, pull_request ]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  run:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      matrix:
+        operating-system: [ ubuntu-latest ]
+        php-versions: [ '7.4', '8.0', '8.1', '8.2' ]
+    name: PHP ${{ matrix.php-versions }} Test on ${{ matrix.operating-system }}
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js 24
-      uses: actions/setup-node@v4
-      with:
-        node-version: '24.x'
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-        
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Verify Installation
-      run: test -d node_modules/https-proxy-agent
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          extensions: curl, json
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Static analysis
+        run: |
+          composer require --dev phpstan/phpstan
+          vendor/bin/phpstan analyse -l 6 src tests
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --verbose --colors=always tests
