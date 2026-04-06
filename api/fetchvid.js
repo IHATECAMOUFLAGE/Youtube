@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/browser-chromium";
+import playwright from "@playwright/browser-chromium";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const browser = await chromium.launch({
+    const browser = await playwright.launch({
       headless: true
     });
 
