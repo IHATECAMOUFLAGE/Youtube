@@ -6,6 +6,6 @@
     "node": "24.x"
   },
   "dependencies": {
-    "@playwright/browser-chromium": "1.44.0"
+    "undici": "^6.0.0"
   }
 }
