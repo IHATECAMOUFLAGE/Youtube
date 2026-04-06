@@ -8,7 +8,11 @@
   "dependencies": {
     "node-fetch": "3.3.2",
     "youtubei.js": "^10.2.0",
-    "https-proxy-agent": "^7.0.5"
+    "https-proxy-agent": "^7.0.5",
     "got-scraping": "^4.0.4",
+    "php": "^7.4|^8.0",
+    "ext-curl": "*",
+    "ext-json": "*",
+    "athlon1600/php-curl-file-downloader": "^1.0"
   }
 }
