@@ -1,8 +1,6 @@
-import chromium from "chrome-aws-lambda";
-import puppeteer from "puppeteer-core";
+import { chromium } from "@playwright/browser-chromium";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Credentials", true);
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -14,18 +12,10 @@ export default async function handler(req, res) {
   if (!url) return res.status(400).json({ error: 'Missing "url" query parameter' });
 
   try {
-    const executablePath = await chromium.executablePath;
-
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: chromium.headless
-    });
-
+    const browser = await chromium.launch();
     const page = await browser.newPage();
 
-    await page.goto("https://downr.org", { waitUntil: "networkidle2" });
+    await page.goto("https://downr.org", { waitUntil: "networkidle" });
 
     const result = await page.evaluate(async (targetUrl) => {
       const response = await fetch("https://downr.org/.netlify/functions/nyt", {
@@ -43,9 +33,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      error: "Internal Server Error",
-      message: error.message
-    });
+    return res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 }
