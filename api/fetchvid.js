@@ -21,12 +21,14 @@ export default async function handler(req, res) {
         "Upgrade-Insecure-Requests": "1"
       },
       throwHttpErrors: false,
-      retry: 0
+      retry: { limit: 0 }
     };
 
+    // Initial requests (HTML)
     await gotScraping.get("https://downr.org/", baseOptions);
     await gotScraping.get("https://downr.org/.netlify/functions/analytics", baseOptions);
 
+    // POST request (JSON)
     const videoResp = await gotScraping.post("https://downr.org/.netlify/functions/nyt", {
       ...baseOptions,
       responseType: 'json',
@@ -49,7 +51,7 @@ export default async function handler(req, res) {
     return res.status(200).json(videoResp.body);
 
   } catch (error) {
-    console.error(error); // Log the full error for debugging
+    console.error(error);
     return res.status(500).json({ 
       error: "Internal Server Error", 
       message: error.message 
