@@ -1,7 +1,5 @@
 import { gotScraping } from 'got-scraping';
 
-const PROXY_URL = "http://xjtnujpf:b3pzt68plr0c@31.59.20.176:6754";
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,7 +16,6 @@ export default async function handler(req, res) {
 
   try {
     const options = {
-      proxyUrl: PROXY_URL,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
