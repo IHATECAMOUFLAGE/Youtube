@@ -23,12 +23,7 @@ export default async function handler(req, res) {
       throwHttpErrors: false,
       retry: { limit: 0 }
     };
-
-    // Initial requests (HTML)
-    await gotScraping.get("https://downr.org/", baseOptions);
-    await gotScraping.get("https://downr.org/.netlify/functions/analytics", baseOptions);
-
-    // POST request (JSON)
+    
     const videoResp = await gotScraping.post("https://downr.org/.netlify/functions/nyt", {
       ...baseOptions,
       responseType: 'json',
