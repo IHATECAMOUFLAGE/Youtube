@@ -9,6 +9,7 @@
     "node-fetch": "3.3.2",
     "youtubei.js": "^10.2.0",
     "https-proxy-agent": "^7.0.5",
-    "got-scraping": "^4.0.4"
+    "got-scraping": "^4.0.4",
+    "puppeteer": "^22.0.0"
   }
 }
