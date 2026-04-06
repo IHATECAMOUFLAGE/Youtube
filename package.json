@@ -1,16 +1,11 @@
 {
-  "name": "youtube-clone-backend",
-  "version": "1.0.0",
+  "name": "infared-youtube-api",
+  "version": "0.0.1",
   "type": "module",
   "engines": {
     "node": "24.x"
   },
   "dependencies": {
-    "node-fetch": "3.3.2",
-    "youtubei.js": "^10.2.0",
-    "https-proxy-agent": "^7.0.5",
-    "got-scraping": "^4.0.4",
-    "puppeteer-core": "^22.0.0",
-    "chrome-aws-lambda": "^10.1.0"
+    "@playwright/browser-chromium": "1.44.0"
   }
 }
