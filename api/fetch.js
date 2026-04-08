@@ -4,6 +4,8 @@ import fetch from "node-fetch";
 const app = express();
 const PORT = 3000;
 
+app.use(express.json());
+
 app.get("/api/fetch", async (req, res) => {
   const targetUrl = req.query.url;
 
@@ -16,19 +18,25 @@ app.get("/api/fetch", async (req, res) => {
     const analyticsHeaders = analyticsRes.headers;
     const setCookie = analyticsHeaders.get("set-cookie");
 
-    const forwardHeaders = {};
-    if (setCookie) forwardHeaders["Cookie"] = setCookie;
+    const forwardHeaders = {
+      "Content-Type": "application/json"
+    };
 
-    const secondRes = await fetch(targetUrl, {
-      method: "GET",
-      headers: forwardHeaders
+    if (setCookie) {
+      forwardHeaders["Cookie"] = setCookie;
+    }
+
+    const nytRes = await fetch("https://downr.org/.netlify/functions/nyt", {
+      method: "POST",
+      headers: forwardHeaders,
+      body: JSON.stringify({ url: targetUrl })
     });
 
-    const body = await secondRes.text();
+    const body = await nytRes.text();
 
-    res.status(secondRes.status).json({
-      status: secondRes.status,
-      headers: Object.fromEntries(secondRes.headers.entries()),
+    res.status(nytRes.status).json({
+      status: nytRes.status,
+      headers: Object.fromEntries(nytRes.headers.entries()),
       body
     });
 
