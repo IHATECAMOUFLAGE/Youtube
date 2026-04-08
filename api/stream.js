@@ -1,4 +1,9 @@
-app.get("/api/encode/stream", async (req, res) => {
+import express from "express";
+import fetch from "node-fetch";
+
+const router = express.Router();
+
+router.get("/", async (req, res) => {
   const target = req.query.url;
 
   if (!target) {
@@ -34,3 +39,5 @@ app.get("/api/encode/stream", async (req, res) => {
     res.status(500).json({ error: "Stream failed", details: err.message });
   }
 });
+
+export default router;
