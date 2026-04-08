@@ -18,10 +18,24 @@ app.get("/api/encode", async (req, res) => {
   }
 
   try {
-    const upstream = await fetch(target);
+    const range = req.headers.range || "";
+    const upstream = await fetch(target, {
+      headers: range ? { Range: range } : {}
+    });
 
-    res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/octet-stream");
-    res.setHeader("Content-Length", upstream.headers.get("content-length") || "");
+    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+    const contentLength = upstream.headers.get("content-length");
+    const status = upstream.status;
+
+    res.status(status);
+    res.setHeader("Content-Type", contentType);
+    if (contentLength) res.setHeader("Content-Length", contentLength);
+
+    const contentRange = upstream.headers.get("content-range");
+    if (contentRange) res.setHeader("Content-Range", contentRange);
+
+    const acceptRanges = upstream.headers.get("accept-ranges");
+    if (acceptRanges) res.setHeader("Accept-Ranges", acceptRanges);
 
     upstream.body.pipe(res);
   } catch (err) {
