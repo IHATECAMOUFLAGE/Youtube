@@ -421,10 +421,16 @@ function setEmbedMode(mode, id) {
 
   if (mode === "youtube") {
     els.embedYoutube.classList.add("active");
-    els.mainPlayer.src = "https://www.youtube.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1";
+    els.mainPlayer.src =
+      "https://www.youtube.com/embed/" +
+      encodeURIComponent(id) +
+      "?autoplay=1&rel=0&modestbranding=1";
   } else if (mode === "adless") {
     els.embedTheta.classList.add("active");
-    fetch("https://youtuliz.b-cdn.net/api/fetch?url=https://www.youtube.com/watch?v=" + encodeURIComponent(id))
+    fetch(
+      "https://youtuliz.b-cdn.net/api/fetch?url=" +
+        encodeURIComponent("https://www.youtube.com/watch?v=" + id)
+    )
       .then(r => r.json())
       .then(data => {
         const media = data.medias && data.medias[0];
