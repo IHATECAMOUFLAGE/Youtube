@@ -1,7 +1,4 @@
-import express from "express";
-const router = express.Router();
-
-router.get("/", (req, res) => {
+export default function handler(req, res) {
   const target = req.query.url;
   if (!target) {
     res.status(400).send("Missing url");
@@ -20,6 +17,4 @@ router.get("/", (req, res) => {
       </body>
     </html>
   `);
-});
-
-export default router;
+}
