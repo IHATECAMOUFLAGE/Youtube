@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 const app = express();
 const PORT = 3000;
 
-app.get("/encode", async (req, res) => {
+app.get("/api/encode", async (req, res) => {
   const target = req.query.url;
 
   if (!target) {
