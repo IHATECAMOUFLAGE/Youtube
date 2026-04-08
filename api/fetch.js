@@ -6,7 +6,6 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// POST /api/fetch  with body: { "url": "https://example.com" }
 app.post("/api/fetch", async (req, res) => {
   const targetUrl = req.body.url;
 
