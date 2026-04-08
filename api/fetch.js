@@ -14,9 +14,9 @@ app.post("/api/fetch", async (req, res) => {
   }
 
   try {
-    const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
-    const analyticsHeaders = analyticsRes.headers;
-    const setCookie = analyticsHeaders.get("set-cookie");
+    const firstRes = await fetch(targetUrl);
+    const firstHeaders = firstRes.headers;
+    const setCookie = firstHeaders.get("set-cookie");
 
     const forwardHeaders = {
       "Content-Type": "application/json"
