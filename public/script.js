@@ -446,7 +446,7 @@ function setEmbedMode(mode, id) {
     els.mainPlayer.src = "https://thetacloud.org/yt/#" + encodeURIComponent(id);
   }
 }
-
+}
     }
 els.embedYoutube.addEventListener("click", function () {
   if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
