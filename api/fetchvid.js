@@ -1,51 +1,36 @@
-import { fetch } from "undici";
+import fetch from "node-fetch";
 
-export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { url } = req.query;
-  if (!url) {
-    return res.status(400).json({ error: 'Missing "url" query parameter' });
-  }
-
+async function main() {
   try {
-    const response = await fetch("https://downr.org/.netlify/functions/nyt", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Origin": "https://downr.org",
-        "Referer": "https://downr.org/"
-      },
-      body: JSON.stringify({ url })
+    const url1 = "https://downr.org/.netlify/functions/analytics";
+    const res1 = await fetch(url1);
+
+    const headers1 = res1.headers;
+    const setCookie = headers1.get("set-cookie");
+
+    console.log("First response cookie:", setCookie);
+
+    const newHeaders = {
+      "Cookie": setCookie || "",
+      "Origin": "https://downr.org",
+      "Referer": "https://downr.org",
+      "url": "https://www.youtube.com/watch?v=wPeUb2SVmEc"
+    };
+
+    const url2 = "https://downr.org/.netlify/functions/nyt";
+    const res2 = await fetch(url2, {
+      method: "GET",
+      headers: newHeaders
     });
 
-    const text = await response.text();
+    const body2 = await res2.text();
 
-    try {
-      const json = JSON.parse(text);
-      return res.status(200).json(json);
-    } catch {
-      return res.status(500).json({
-        error: "Invalid JSON from Downr",
-        raw: text
-      });
-    }
+    console.log("Second response status:", res2.status);
+    console.log("Second response body:", body2);
 
   } catch (err) {
-    console.error("Fetch error:", err);
-    return res.status(500).json({
-      error: "Internal Server Error",
-      message: err.message
-    });
+    console.error("Error:", err);
   }
 }
+
+main();
