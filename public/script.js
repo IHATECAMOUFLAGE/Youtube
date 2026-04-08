@@ -418,14 +418,26 @@ function setEmbedMode(mode, id) {
   embedMode = mode;
   els.embedYoutube.classList.remove("active");
   els.embedTheta.classList.remove("active");
+
   if (mode === "youtube") {
     els.embedYoutube.classList.add("active");
     els.mainPlayer.src = "https://www.youtube.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1";
+  } else if (mode === "adless") {
+    els.embedTheta.classList.add("active");
+    fetch("https://youtuliz.b-cdn.net/api/fetch?url=https://www.youtube.com/watch?v=" + encodeURIComponent(id))
+      .then(r => r.json())
+      .then(data => {
+        const media = data.medias && data.medias[0];
+        if (media && media.url) {
+          els.mainPlayer.src = media.url;
+        }
+      });
   } else {
     els.embedTheta.classList.add("active");
     els.mainPlayer.src = "https://thetacloud.org/yt/#" + encodeURIComponent(id);
   }
 }
+
 els.embedYoutube.addEventListener("click", function () {
   if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
   setEmbedMode("youtube", currentResults[currentVideoIndex].id);
