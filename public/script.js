@@ -436,7 +436,7 @@ function setEmbedMode(mode, id) {
       const media = data.medias && data.medias[0];
       if (media && media.url) {
         const encoded = encodeURIComponent(media.url);
-        els.mainPlayer.src = "https://youtuliz.b-cdn.net/api/encode?url=" + encoded;
+        els.mainPlayer.src = "/api/encode?url=" + encoded;
       }
     });
 }   
