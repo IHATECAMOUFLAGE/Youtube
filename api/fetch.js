@@ -6,6 +6,13 @@ const PORT = 3000;
 
 app.get("/api/fetch", async (req, res) => {
   try {
+    const targetUrl = req.query.url;
+
+    if (!targetUrl) {
+      res.status(400).json({ error: "Missing ?url=" });
+      return;
+    }
+
     const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
     const cookie = analyticsRes.headers.get("set-cookie");
 
@@ -20,7 +27,7 @@ app.get("/api/fetch", async (req, res) => {
         "Origin": "https://downr.org",
         "Referer": "https://downr.org/"
       },
-      body: JSON.stringify({ url: "https://example.com" })
+      body: JSON.stringify({ url: targetUrl })
     });
 
     const body = await nytRes.text();
