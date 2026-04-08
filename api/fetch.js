@@ -7,23 +7,12 @@ const PORT = 3000;
 app.get("/api/fetch", async (req, res) => {
   try {
     const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
-    const cookie = analyticsRes.headers.get("set-cookie");
-
-    const nytRes = await fetch("https://downr.org/.netlify/functions/nyt", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Cookie": cookie
-      },
-      body: JSON.stringify({ url: "https://example.com" })
-    });
-
-    const body = await nytRes.text();
+    const allCookies = analyticsRes.headers.raw()["set-cookie"] || [];
 
     res.setHeader("Content-Type", "application/json");
-    res.status(nytRes.status).send(body);
+    res.status(200).json({ cookies: allCookies });
   } catch (err) {
-    res.status(500).json({ error: "Failed", details: err.message });
+    res.status(500).json({ error: "Failed to fetch analytics", details: err.message });
   }
 });
 
