@@ -428,15 +428,20 @@ function setEmbedMode(mode, id) {
   } else {
   els.embedTheta.classList.add("active");
   fetch(
-    "https://youtuliz.b-cdn.net/api/fetch?url=" +
-      encodeURIComponent("https://www.youtube.com/watch?v=" + id)
-  )
-    .then(r => r.json())
-    .then(data => {
-      const media = data.medias && data.medias[0];
-      const encoded = encodeURIComponent(media.url);
-      els.mainPlayer.src = "/api/encode?url=" + encoded;
-    });
+      "/api/fetch?url=" +
+        encodeURIComponent("https://www.youtube.com/watch?v=" + id)
+    )
+      .then(r => r.json())
+      .then(data => {
+        const media = data.medias && data.medias[0];
+        if (!media || !media.url) {
+          els.mainPlayer.src = "";
+          return;
+        }
+
+        const encoded = encodeURIComponent(media.url);
+        els.mainPlayer.src = "/api/encode?url=" + encoded;
+      });
 }   
     }
 els.embedYoutube.addEventListener("click", function () {
