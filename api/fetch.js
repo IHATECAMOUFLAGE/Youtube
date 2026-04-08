@@ -12,17 +12,31 @@ app.get("/api/fetch", async (req, res) => {
   }
 
   try {
-    const response = await fetch(targetUrl);
-    const text = await response.text();
+    const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
+    const analyticsHeaders = analyticsRes.headers;
+    const setCookie = analyticsHeaders.get("set-cookie");
 
-    res.status(200).json({
-      status: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: text
+    const forwardHeaders = {};
+    if (setCookie) forwardHeaders["Cookie"] = setCookie;
+
+    const secondRes = await fetch(targetUrl, {
+      method: "GET",
+      headers: forwardHeaders
+    });
+
+    const body = await secondRes.text();
+
+    res.status(secondRes.status).json({
+      status: secondRes.status,
+      headers: Object.fromEntries(secondRes.headers.entries()),
+      body
     });
 
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch URL", details: err.message });
+    res.status(500).json({
+      error: "Failed to fetch",
+      details: err.message
+    });
   }
 });
 
