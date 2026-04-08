@@ -6,11 +6,12 @@ const PORT = 3000;
 
 app.use(express.json());
 
-app.get("/api/fetch", async (req, res) => {
-  const targetUrl = req.query.url;
+// POST /api/fetch  with body: { "url": "https://example.com" }
+app.post("/api/fetch", async (req, res) => {
+  const targetUrl = req.body.url;
 
   if (!targetUrl) {
-    return res.status(400).json({ error: "Missing ?url=" });
+    return res.status(400).json({ error: "Missing 'url' in JSON body" });
   }
 
   try {
