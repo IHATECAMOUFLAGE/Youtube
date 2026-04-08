@@ -425,28 +425,21 @@ function setEmbedMode(mode, id) {
       "https://www.youtube.com/embed/" +
       encodeURIComponent(id) +
       "?autoplay=1&rel=0&modestbranding=1";
-  } else if (mode === "theta") {
-    els.embedTheta.classList.add("active");
-
-    fetch(
-      "https://youtuliz.b-cdn.net/api/fetch?url=" +
-        encodeURIComponent("https://www.youtube.com/watch?v=" + id)
-    )
-      .then(r => r.json())
-      .then(data => {
-        const media = data.medias && data.medias[0];
-        if (media && media.url) {
-          const encoded = encodeURIComponent(media.url);
-          els.mainPlayer.src =
-            "https://youtuliz.b-cdn.net/api/encode?url=" + encoded;
-        }
-      });
   } else {
-    els.embedTheta.classList.add("active");
-    els.mainPlayer.src = "https://thetacloud.org/yt/#" + encodeURIComponent(id);
-  }
-}
-}
+  els.embedTheta.classList.add("active");
+  fetch(
+    "https://youtuliz.b-cdn.net/api/fetch?url=" +
+      encodeURIComponent("https://www.youtube.com/watch?v=" + id)
+  )
+    .then(r => r.json())
+    .then(data => {
+      const media = data.medias && data.medias[0];
+      if (media && media.url) {
+        const encoded = encodeURIComponent(media.url);
+        els.mainPlayer.src = "/api/encode?url=" + encoded;
+      }
+    });
+}   
     }
 els.embedYoutube.addEventListener("click", function () {
   if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
