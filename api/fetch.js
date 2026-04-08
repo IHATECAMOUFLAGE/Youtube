@@ -5,39 +5,19 @@ const app = express();
 const PORT = 3000;
 
 app.get("/api/fetch", async (req, res) => {
-  const targetUrl = req.query.url;
-
-  if (!targetUrl) {
-    return res.status(400).json({ error: "Missing ?url=" });
-  }
-
   try {
     const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
-    const analyticsHeaders = analyticsRes.headers;
-    const setCookie = analyticsHeaders.get("set-cookie");
 
-    const forwardHeaders = {
-      "Content-Type": "application/json"
-    };
-
-    if (setCookie) {
-      forwardHeaders["Cookie"] = setCookie;
-    }
-
-    const nytRes = await fetch("https://downr.org/.netlify/functions/nyt", {
-      method: "POST",
-      headers: forwardHeaders,
-      body: JSON.stringify({ url: targetUrl })
-    });
-
-    const body = await nytRes.text();
+    const cookie = analyticsRes.headers.get("set-cookie");
 
     res.setHeader("Content-Type", "application/json");
-    res.status(nytRes.status).send(body);
+    res.status(200).json({
+      cookieReceived: cookie
+    });
 
   } catch (err) {
     res.status(500).json({
-      error: "Failed to complete request",
+      error: "Failed to fetch analytics",
       details: err.message
     });
   }
