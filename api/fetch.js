@@ -4,19 +4,17 @@ import fetch from "node-fetch";
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
-
-app.post("/api/fetch", async (req, res) => {
-  const targetUrl = req.body.url;
+app.get("/api/fetch", async (req, res) => {
+  const targetUrl = req.query.url;
 
   if (!targetUrl) {
-    return res.status(400).json({ error: "Missing 'url' in JSON body" });
+    return res.status(400).json({ error: "Missing ?url=" });
   }
 
   try {
-    const firstRes = await fetch(targetUrl);
-    const firstHeaders = firstRes.headers;
-    const setCookie = firstHeaders.get("set-cookie");
+    const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
+    const analyticsHeaders = analyticsRes.headers;
+    const setCookie = analyticsHeaders.get("set-cookie");
 
     const forwardHeaders = {
       "Content-Type": "application/json"
@@ -34,15 +32,12 @@ app.post("/api/fetch", async (req, res) => {
 
     const body = await nytRes.text();
 
-    res.status(nytRes.status).json({
-      status: nytRes.status,
-      headers: Object.fromEntries(nytRes.headers.entries()),
-      body
-    });
+    res.setHeader("Content-Type", "application/json");
+    res.status(nytRes.status).send(body);
 
   } catch (err) {
     res.status(500).json({
-      error: "Failed to fetch",
+      error: "Failed to complete request",
       details: err.message
     });
   }
