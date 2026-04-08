@@ -1,9 +1,9 @@
 export default function handler(req, res) {
   const target = req.query.url;
-        return;
+  if (!target) {
+    res.status(400).send("Missing url");
+    return;
   }
-
-  const encoded = encodeURIComponent(target);
 
   res.setHeader("Content-Type", "text/html");
   res.send(`
