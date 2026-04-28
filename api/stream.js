@@ -1,49 +1,28 @@
-import express from "express";
-import { pipeline, Readable } from "stream";
-import { promisify } from "util";
+import { v4 as uuid } from "uuid";
 
-const app = express();
-const pipe = promisify(pipeline);
+const streams = new Map();
 
-app.get("/api/stream", async (req, res) => {
-  const target = req.query.url;
+export default async function handler(req, res) {
+  if (req.method === "POST") {
+    const { url } = req.body || {};
+    if (!url) return res.status(400).json({ error: "Missing url" });
 
-  if (!target) {
-    res.status(400).json({ error: "Missing url parameter" });
-    return;
+    const id = uuid();
+    streams.set(id, url);
+
+    return res.json({ stream: `/api/stream?id=${id}` });
   }
+
+  const id = req.query.id;
+  const target = streams.get(id);
+
+  if (!target) return res.status(404).send("Invalid stream id");
 
   try {
-    const range = req.headers.range || "";
-    const upstream = await fetch(target, {
-      headers: range ? { Range: range } : {}
-    });
-
-    res.status(upstream.status);
+    const upstream = await fetch(target);
     res.setHeader("Content-Type", upstream.headers.get("content-type") || "video/mp4");
-
-    const contentLength = upstream.headers.get("content-length");
-    const contentRange = upstream.headers.get("content-range");
-    const acceptRanges = upstream.headers.get("accept-ranges");
-
-    if (contentLength) res.setHeader("Content-Length", contentLength);
-    if (contentRange) res.setHeader("Content-Range", contentRange);
-    if (acceptRanges) res.setHeader("Accept-Ranges", acceptRanges);
-
-    const nodeStream = Readable.fromWeb(upstream.body);
-
-    await pipe(nodeStream, res);
-
+    upstream.body.pipe(res);
   } catch (err) {
-    console.error("Stream error:", err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Stream failed" });
-    } else {
-      res.end();
-    }
+    res.status(500).send("Stream failed");
   }
-});
-
-app.listen(3000, "0.0.0.0", () => {
-  console.log("Express server running on http://localhost:3000");
-});
+}
