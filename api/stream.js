@@ -1,6 +1,11 @@
-import fetch from "node-fetch";
+import express from "express";
+import { pipeline, Readable } from "stream";
+import { promisify } from "util";
 
-export default async function handler(req, res) {
+const app = express();
+const pipe = promisify(pipeline);
+
+app.get("/api/stream", async (req, res) => {
   const target = req.query.url;
 
   if (!target) {
@@ -14,20 +19,31 @@ export default async function handler(req, res) {
       headers: range ? { Range: range } : {}
     });
 
-    const status = upstream.status;
-    const contentType = upstream.headers.get("content-type") || "video/mp4";
+    res.status(upstream.status);
+    res.setHeader("Content-Type", upstream.headers.get("content-type") || "video/mp4");
+
     const contentLength = upstream.headers.get("content-length");
     const contentRange = upstream.headers.get("content-range");
     const acceptRanges = upstream.headers.get("accept-ranges");
 
-    res.status(status);
-    res.setHeader("Content-Type", contentType);
     if (contentLength) res.setHeader("Content-Length", contentLength);
     if (contentRange) res.setHeader("Content-Range", contentRange);
     if (acceptRanges) res.setHeader("Accept-Ranges", acceptRanges);
 
-    upstream.body.pipe(res);
+    const nodeStream = Readable.fromWeb(upstream.body);
+
+    await pipe(nodeStream, res);
+
   } catch (err) {
-    res.status(500).json({ error: "Stream failed" });
+    console.error("Stream error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Stream failed" });
+    } else {
+      res.end();
+    }
   }
-}
+});
+
+app.listen(3000, "0.0.0.0", () => {
+  console.log("Express server running on http://localhost:3000");
+});

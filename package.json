@@ -1,12 +1,17 @@
 {
-  "name": "infared-youtube-api",
+  "name": "infared-youtube",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "start": "node ./api/stream.js"
+  },
   "engines": {
     "node": "24.x"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "node-fetch": "^3.3.2"
+    "express": "^4.22.1",
+    "node-fetch": "^3.3.2",
+    "stream": "^0.0.3",
+    "util": "^0.12.5"
   }
 }
