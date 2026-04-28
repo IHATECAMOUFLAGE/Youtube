@@ -5,7 +5,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  const response = await fetch("/api/stream", {
+  const base = `https://${req.headers.host}`;
+
+  const response = await fetch(`${base}/api/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url: target })
