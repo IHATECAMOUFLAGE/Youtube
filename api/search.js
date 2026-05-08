@@ -2,67 +2,67 @@ export default async function handler(req, res) {
   const { query } = req.query;
 
   if (!query) {
-    return res.status(400).json({ results: [] });
+    res.status(400).json({ results: [] });
+    return;
   }
 
   try {
-    // if query is already a youtube url
-    let videoId = null;
+    const results = [];
+    const seen = new Set();
 
-    const directMatch = query.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
-    );
+    async function addVideo(id) {
+      if (!id || seen.has(id)) return;
+      seen.add(id);
 
-    if (directMatch) {
-      videoId = directMatch[1];
-    } else {
-      // otherwise assume query itself is the id
-      const idMatch = query.match(/^([a-zA-Z0-9_-]{11})$/);
-      if (idMatch) {
-        videoId = idMatch[1];
-      }
+      const watchUrl = `https://www.youtube.com/watch?v=${id}`;
+
+      const oembedUrl =
+        "https://www.youtube.com/oembed?url=" +
+        encodeURIComponent(watchUrl) +
+        "&format=json";
+
+      try {
+        const response = await fetch(oembedUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            Accept: "application/json"
+          }
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        results.push({
+          id,
+          title: data.title || "",
+          thumbnail:
+            data.thumbnail_url ||
+            `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+          duration: "unknown",
+          views: "unknown",
+          channel: data.author_name || "YouTube"
+        });
+      } catch {}
     }
 
-    if (!videoId) {
-      return res.status(400).json({ results: [] });
+    const directRegex =
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/g;
+
+    let match;
+
+    while ((match = directRegex.exec(query)) !== null) {
+      await addVideo(match[1]);
     }
 
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const rawIdRegex = /\b[a-zA-Z0-9_-]{11}\b/g;
 
-    const oembedUrl =
-      "https://www.youtube.com/oembed?url=" +
-      encodeURIComponent(watchUrl) +
-      "&format=json";
-
-    const response = await fetch(oembedUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        Accept: "application/json"
-      }
-    });
-
-    if (!response.ok) {
-      return res.status(200).json({ results: [] });
+    while ((match = rawIdRegex.exec(query)) !== null) {
+      await addVideo(match[0]);
     }
 
-    const data = await response.json();
-
-    // exact same structure as before
-    const results = [
-      {
-        id: videoId,
-        title: data.title || "",
-        thumbnail:
-          data.thumbnail_url ||
-          `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-        duration: "",
-        views: "",
-        channel: data.author_name || "YouTube"
-      }
-    ];
-
-    return res.status(200).json({ results });
+    res.status(200).json({ results });
   } catch (e) {
-    return res.status(500).json({ results: [] });
+    res.status(500).json({ results: [] });
   }
 }
