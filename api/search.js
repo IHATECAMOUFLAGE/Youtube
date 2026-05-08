@@ -1,77 +1,68 @@
 export default async function handler(req, res) {
   const { query } = req.query;
+
   if (!query) {
-    res.status(400).json({ results: [] });
-    return;
+    return res.status(400).json({ results: [] });
   }
 
-  const q = encodeURIComponent(query + " youtube");
-  const url = "https://video.search.yahoo.com/search/video?p=" + q;
-
   try {
-    const response = await fetch(url, {
+    // if query is already a youtube url
+    let videoId = null;
+
+    const directMatch = query.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+    );
+
+    if (directMatch) {
+      videoId = directMatch[1];
+    } else {
+      // otherwise assume query itself is the id
+      const idMatch = query.match(/^([a-zA-Z0-9_-]{11})$/);
+      if (idMatch) {
+        videoId = idMatch[1];
+      }
+    }
+
+    if (!videoId) {
+      return res.status(400).json({ results: [] });
+    }
+
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    const oembedUrl =
+      "https://www.youtube.com/oembed?url=" +
+      encodeURIComponent(watchUrl) +
+      "&format=json";
+
+    const response = await fetch(oembedUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        "Accept": "text/html"
+        Accept: "application/json"
       }
     });
 
-    const html = await response.text();
-    const results = [];
-
-    const jsonMatch = html.match(/YUI\.Env\.SrpResults\s*=\s*(\{[\s\S]*?\});/);
-
-    if (jsonMatch && jsonMatch[1]) {
-      try {
-        const data = JSON.parse(jsonMatch[1]);
-        if (data.content && Array.isArray(data.content)) {
-          for (const item of data.content) {
-            const target = item.rurl || item.url || "";
-            const idMatch = target.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
-            if (!idMatch) continue;
-
-            const id = idMatch[1];
-            const title = (item.tit || item.title || "").replace(/\\u003C\/?b\\u003E/g, "").trim();
-
-            results.push({
-              id,
-              title,
-              thumbnail: "https://i.ytimg.com/vi/" + id + "/mqdefault.jpg",
-              duration: item.l || "",
-              views: item.viewsShortFormat || "",
-              channel: item.channel || "YouTube"
-            });
-          }
-        }
-      } catch (e) {}
+    if (!response.ok) {
+      return res.status(200).json({ results: [] });
     }
 
-    if (results.length === 0) {
-      const regex = /<a[^>]+href="([^"]+youtube\.com\/watch\?v=[^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
-      const seen = new Set();
-      let m;
-      while ((m = regex.exec(html)) !== null) {
-        const url = m[1];
-        const idMatch = url.match(/v=([a-zA-Z0-9_-]{11})/);
-        if (!idMatch) continue;
-        const id = idMatch[1];
-        if (seen.has(id)) continue;
-        seen.add(id);
-        const title = m[2].replace(/<[^>]+>/g, " ").trim();
-        results.push({
-          id,
-          title,
-          thumbnail: "https://i.ytimg.com/vi/" + id + "/mqdefault.jpg",
-          duration: "",
-          views: "",
-          channel: "YouTube"
-        });
-        if (results.length >= 30) break;
+    const data = await response.json();
+
+    // exact same structure as before
+    const results = [
+      {
+        id: videoId,
+        title: data.title || "",
+        thumbnail:
+          data.thumbnail_url ||
+          `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+        duration: "",
+        views: "",
+        channel: data.author_name || "YouTube"
       }
-    }
+    ];
 
-    res.status(200).json({ results });
+    return res.status(200).json({ results });
   } catch (e) {
-    res.status(500).json({ results: [] });
+    return res.status(500).json({ results: [] });
   }
 }

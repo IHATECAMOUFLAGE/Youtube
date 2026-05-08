@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     <html>
       <body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;">
         <video controls autoplay style="width:100%;height:auto;max-height:100vh;">
-          <source src="${streamUrl}" type="video/mp4">
+          <source src="${url}" type="video/mp4">
         </video>
       </body>
     </html>
