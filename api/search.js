@@ -7,59 +7,63 @@ export default async function handler(req, res) {
   }
 
   try {
-    const results = [];
+    // extract youtube ids from query
+    const ids = [];
     const seen = new Set();
 
-    async function addVideo(id) {
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-
-      const watchUrl = `https://www.youtube.com/watch?v=${id}`;
-
-      const oembedUrl =
-        "https://www.youtube.com/oembed?url=" +
-        encodeURIComponent(watchUrl) +
-        "&format=json";
-
-      try {
-        const response = await fetch(oembedUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0",
-            Accept: "application/json"
-          }
-        });
-
-        if (!response.ok) return;
-
-        const data = await response.json();
-
-        results.push({
-          id,
-          title: data.title || "",
-          thumbnail:
-            data.thumbnail_url ||
-            `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
-          duration: "unknown",
-          views: "unknown",
-          channel: data.author_name || "YouTube"
-        });
-      } catch {}
-    }
-
-    const directRegex =
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/g;
+    const regex =
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)?([a-zA-Z0-9_-]{11})/g;
 
     let match;
 
-    while ((match = directRegex.exec(query)) !== null) {
-      await addVideo(match[1]);
+    while ((match = regex.exec(query)) !== null) {
+      const id = match[1];
+
+      if (!seen.has(id)) {
+        seen.add(id);
+        ids.push(id);
+      }
     }
 
-    const rawIdRegex = /\b[a-zA-Z0-9_-]{11}\b/g;
-
-    while ((match = rawIdRegex.exec(query)) !== null) {
-      await addVideo(match[0]);
+    if (ids.length === 0) {
+      res.status(200).json({ results: [] });
+      return;
     }
+
+    // use ytapi.apps.mattw.io instead of googleapis
+    const apiUrl =
+      "https://ytapi.apps.mattw.io/v3/videos?" +
+      new URLSearchParams({
+        part: "snippet,contentDetails,statistics",
+        id: ids.join(","),
+        key: "foo1"
+      });
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      res.status(200).json({ results: [] });
+      return;
+    }
+
+    const data = await response.json();
+
+    const results = (data.items || []).map((item) => ({
+      id: item.id,
+      title: item.snippet?.title || "",
+      thumbnail:
+        item.snippet?.thumbnails?.medium?.url ||
+        item.snippet?.thumbnails?.default?.url ||
+        `https://i.ytimg.com/vi/${item.id}/mqdefault.jpg`,
+      duration: item.contentDetails?.duration || "unknown",
+      views: item.statistics?.viewCount || "unknown",
+      channel: item.snippet?.channelTitle || "YouTube"
+    }));
 
     res.status(200).json({ results });
   } catch (e) {
