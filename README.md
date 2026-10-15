@@ -29,6 +29,7 @@ If you want to modify **and** redistribute this project publicly, you **must** o
 # Allowed people able to modify & redistribute:
 - DISCORD ID: **divinelordkaio**
 - DISCORD SERVER'S SITE DEVELOPERS: **https://discord.gg/ryhPyrX8gt**
+- https://github.com/Reeyuki/YukiOS
 
 ## Attribution
 
