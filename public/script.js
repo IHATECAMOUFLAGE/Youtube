@@ -426,24 +426,26 @@ function setEmbedMode(mode, id) {
       encodeURIComponent(id) +
       "?feature=oembed&autoplay=1&rel=0";
   } else {
-  els.embedTheta.classList.add("active");
-  fetch(
+    els.embedTheta.classList.add("active");
+    fetch(
       "/api/fetch?url=" +
         encodeURIComponent("https://www.youtube.com/watch?v=" + id)
     )
       .then(r => r.json())
       .then(data => {
-        const media = data.medias && data.medias[0];
-        if (!media || !media.url) {
+        if (!data || !data.downloadUrl) {
           els.mainPlayer.src = "";
           return;
         }
 
-        const encoded = encodeURIComponent(media.url);
-        els.mainPlayer.src = "/api/encode?url=" + encoded;
+        els.mainPlayer.src = data.downloadUrl;
+      })
+      .catch(err => {
+        console.error("Failed to fetch stream URL:", err);
+        els.mainPlayer.src = "";
       });
-}   
-    }
+  }
+}
 els.embedYoutube.addEventListener("click", function () {
   if (currentVideoIndex < 0 || !currentResults[currentVideoIndex]) return;
   setEmbedMode("youtube", currentResults[currentVideoIndex].id);
