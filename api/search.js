@@ -1,5 +1,16 @@
+import { Innertube } from "youtubei.js";
+
+let innertubePromise;
+
+function getInnertube() {
+  if (!innertubePromise) {
+    innertubePromise = Innertube.create();
+  }
+  return innertubePromise;
+}
+
 export default async function handler(req, res) {
-  const { query } = req.query;
+  const query = req.query.query;
 
   if (!query) {
     res.status(400).json({ results: [] });
@@ -7,101 +18,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    const results = [];
-    const seen = new Set();
-
-    const searchUrl =
-      "https://video.search.yahoo.com/search/video?" +
-      new URLSearchParams({
-        p: query + " youtube",
-        fr: "sfp"
-      });
-
-    const searchResponse = await fetch(searchUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        Accept: "text/html"
-      }
-    });
-
-    if (!searchResponse.ok) {
-      res.status(200).json({ results: [] });
-      return;
-    }
-
-    const html = await searchResponse.text();
-
-    const cards = html.split('<li class="tile').slice(1);
-
-    const ids = [];
-
-    for (const card of cards) {
-      const refMatch = card.match(/data-referenceurl="([^"]+)"/);
-      const hrefMatch = card.match(/href="([^"]+)"/);
-
-      const url = refMatch?.[1] || hrefMatch?.[1];
-      if (!url) continue;
-
-      const idMatch = url.match(/v=([^&]+)/);
-      if (!idMatch) continue;
-
-      const id = idMatch[1];
-      if (!id || seen.has(id)) continue;
-
-      seen.add(id);
-      ids.push(id);
-    }
-
-    if (ids.length === 0) {
-      res.status(200).json({ results: [] });
-      return;
-    }
-
-    for (const card of cards) {
-      const refMatch = card.match(/data-referenceurl="([^"]+)"/);
-      const hrefMatch = card.match(/href="([^"]+)"/);
-      const url = refMatch?.[1] || hrefMatch?.[1];
-      if (!url) continue;
-
-      const idMatch = url.match(/v=([^&]+)/);
-      if (!idMatch) continue;
-
-      const id = idMatch[1];
-      if (!ids.includes(id)) continue;
-
-      const titleMatch = card.match(/tile-title[^>]*>(.*?)<\/p>/s);
-      const title = titleMatch
-        ? titleMatch[1].replace(/<[^>]+>/g, "").trim()
-        : "";
-
-      const thumbMatch = card.match(/<img[^>]+src="([^"]+)"/);
-      const thumbnail =
-        thumbMatch?.[1] ||
-        `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
-
-      const durationMatch = card.match(/class="[^"]*time[^"]*"[^>]*>(.*?)<\/p>/);
-      const duration = durationMatch?.[1]?.trim() || "unknown";
-
-      const viewsMatch = card.match(/(\d[\d.,]*[MK]?) views/i);
-      const views = viewsMatch?.[1] || "unknown";
-
-      const channelMatch = card.match(/tile-domain[^>]*>(.*?)<\/p>/);
-      const channel = channelMatch
-        ? channelMatch[1].replace(/<[^>]+>/g, "").trim()
-        : "YouTube";
-
-      results.push({
-        id,
-        title,
-        thumbnail,
-        duration,
-        views,
-        channel
-      });
-    }
+    const innertube = await getInnertube();
+    const search = await innertube.search(String(query));
+    const results = search.results
+      .filter((video) => video.video_id)
+      .map((video) => ({
+        id: video.video_id,
+        title: video.title?.toString() || "",
+        thumbnail:
+          video.best_thumbnail?.url ||
+          video.thumbnails?.[0]?.url ||
+          `https://i.ytimg.com/vi/${video.video_id}/mqdefault.jpg`,
+        duration: video.duration?.text || (video.is_live ? "Live" : "unknown"),
+        views:
+          video.short_view_count?.toString() ||
+          video.view_count?.toString() ||
+          "unknown",
+        channel: video.author?.name || "YouTube"
+      }));
 
     res.status(200).json({ results });
-  } catch (e) {
+  } catch (error) {
     res.status(500).json({ results: [] });
   }
 }

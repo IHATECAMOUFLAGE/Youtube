@@ -9,36 +9,68 @@ app.get("/api/fetch", async (req, res) => {
     const targetUrl = req.query.url;
 
     if (!targetUrl) {
-      res.status(400).json({ error: "Missing ?url=" });
+      res.status(400).json({ error: "Missing ?url= parameter" });
       return;
     }
 
-    const analyticsRes = await fetch("https://downr.org/.netlify/functions/analytics");
-    const cookie = analyticsRes.headers.get("set-cookie");
+    // Construct the AceThinker API URL
+    const apiUrl = `https://www.acethinker.ai/downloader/api/dlapinewv2.php?url=${encodeURIComponent(
+      targetUrl
+    )}`;
 
-    const nytRes = await fetch("https://downr.org/.netlify/functions/nyt", {
-      method: "POST",
+    const apiRes = await fetch(apiUrl, {
       headers: {
-        "Content-Type": "application/json",
-        "Cookie": cookie,
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Origin": "https://downr.org",
-        "Referer": "https://downr.org/"
-      },
-      body: JSON.stringify({ url: targetUrl })
+        "Referer": "https://www.acethinker.ai/"
+      }
     });
 
-    const body = await nytRes.text();
+    if (!apiRes.ok) {
+      res.status(apiRes.status).json({ error: "Failed to fetch from API" });
+      return;
+    }
 
+    const data = await apiRes.json();
+    const resData = data?.res_data;
+
+    if (!resData || resData.message !== "success") {
+      res.status(404).json({ error: "Video not found or extraction failed", raw: data });
+      return;
+    }
+
+    // Locate the 360p format (which includes combined audio & video)
+    const formats = resData.formats || [];
+    let selectedFormat = formats.find((f) => f.quality === "360p");
+
+    // Fallback: If 360p isn't found, find the first format that has an audio codec
+    if (!selectedFormat) {
+      selectedFormat = formats.find(
+        (f) => f.acodec && f.acodec !== "none"
+      );
+    }
+
+    if (!selectedFormat) {
+      res.status(404).json({ error: "No suitable video format with audio found" });
+      return;
+    }
+
+    // Return the response with video details and direct download URL
     res.setHeader("Content-Type", "application/json");
-    res.status(nytRes.status).send(body);
+    res.json({
+      title: resData.title,
+      duration: resData.duration,
+      thumbnail: resData.thumbnail,
+      quality: selectedFormat.quality,
+      downloadUrl: selectedFormat.url,
+      ext: selectedFormat.ext
+    });
   } catch (err) {
-    res.status(500).json({ error: "Failed", details: err.message });
+    res.status(500).json({ error: "Server error", details: err.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
