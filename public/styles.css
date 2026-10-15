@@ -145,3 +145,9 @@ body.mobile-sidebar-open .backdrop{opacity:1;pointer-events:auto}
   .header-center{flex:1;margin:0 8px}.search-wrapper{max-width:none}.autocomplete{right:0}
 }
 @media (max-width:600px){.video-grid{grid-template-columns:1fr}.cp-time{display:none}}
+
+.pill-btn.sub{background:#fff;color:#0f0f0f;margin-left:8px}
+.pill-btn.sub:hover{background:#d9d9d9}
+.pill-btn.sub.subscribed{background:var(--chip);color:var(--text)}
+.pill-btn:disabled{opacity:.7;cursor:progress}
+#subList{margin-bottom:16px}

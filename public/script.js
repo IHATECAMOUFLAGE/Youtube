@@ -10,7 +10,7 @@
   const state = {
     tab: "home", query: "", results: [], current: null, mode: "youtube",
     liked: store.get("yt_liked"), history: store.get("yt_history"),
-    subscriptions: ["Marques Brownlee", "Linus Tech Tips", "MrBeast", "Kurzgesagt", "Veritasium"],
+    subscriptions: store.get("yt_subs"),
     topics: ["Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking", "Podcasts", "Tech", "Movies"],
     topicIdx: 0, feed: false, loadingMore: false, token: 0, playToken: 0
   };
@@ -18,7 +18,7 @@
   ["searchInput", "autocomplete", "backdrop", "searchButton", "mainSection", "shortsSection", "watchLayout", "resultsGrid",
     "shortsGrid", "shortsStatus", "mainPlayer", "pageTitle", "homeLogo", "toast", "likeBtn", "likeText", "shareBtn", "status",
     "watchTitle", "watchChannelName", "watchChannelAvatar", "watchViews", "watchDescription", "relatedList", "embedYoutube",
-    "embedTheta", "sidebar", "menuToggle", "notificationBtn", "accountBtn", "sentinel", "moreLoader", "chipsRow"
+    "embedTheta", "subBtn", "downloadBtn", "downloadText", "subList", "sidebar", "menuToggle", "notificationBtn", "accountBtn", "sentinel", "moreLoader", "chipsRow"
   ].forEach((id) => (els[id] = $(id)));
   const chips = document.querySelectorAll(".chip");
   const sidebarItems = document.querySelectorAll(".sidebar-item");
@@ -204,6 +204,20 @@
     if (!list.length) return setStatus(els.status, "video_library", emptyMsg);
     renderGrid(state.results);
   }
+  const isSub = (name) => state.subscriptions.some((s) => s.toLowerCase() === (name || "").toLowerCase());
+  function loadSubscriptions(only = "") {
+    if (!state.subscriptions.length) {
+      els.subList.hidden = true;
+      return showList("Subscriptions", [], "No subscriptions yet. Open a video and press Subscribe to follow its channel.");
+    }
+    els.subList.replaceChildren(...["All"].concat(state.subscriptions).map((name, i) => {
+      const b = h("button", "chip" + ((i === 0 ? !only : only === name) ? " active" : ""), name);
+      b.onclick = () => loadSubscriptions(i === 0 ? "" : name);
+      return b;
+    }));
+    els.subList.hidden = false;
+    loadFeed(only ? [only] : state.subscriptions, { title: only || "Latest from Subscriptions" });
+  }
   async function loadShorts() {
     const t = ++state.token;
     setStatus(els.shortsStatus);
@@ -245,6 +259,7 @@
     els.mainSection.hidden = tab === "shorts";
     els.shortsSection.hidden = tab !== "shorts";
     els.chipsRow.hidden = tab !== "home";
+    els.subList.hidden = true;
     if (tab === "home") {
       state.query = query;
       chips.forEach((c) => c.classList.toggle("active", (c.dataset.query || "") === query));
@@ -254,7 +269,7 @@
       state.query = query; els.searchInput.value = query;
       loadFeed([query], { title: "Results for \u201C" + query + "\u201D" });
     } else if (tab === "shorts") loadShorts();
-    else if (tab === "subscriptions") loadFeed(state.subscriptions, { title: "Latest from Subscriptions" });
+    else if (tab === "subscriptions") loadSubscriptions();
     else if (tab === "history") showList("Watch History", state.history, "Videos you watch will show up here.");
     else if (tab === "liked") showList("Liked Videos", state.liked, "Videos you like will show up here.");
     else if (tab === "library") showList("Library", dedupe(state.history.concat(state.liked)), "Your history and liked videos will show up here.");
@@ -286,6 +301,7 @@
     document.title = (v.title || "Watch") + " - YouTube";
     renderRelated();
     updateLike();
+    updateSub();
     setMode(state.mode);
     scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -326,6 +342,21 @@
     store.set("yt_liked", state.liked);
     updateLike();
   };
+  function updateSub() {
+    const on = isSub(state.current.channel);
+    els.subBtn.classList.toggle("subscribed", on);
+    els.subBtn.textContent = on ? "Subscribed" : "Subscribe";
+  }
+  els.subBtn.onclick = () => {
+    const name = state.current && state.current.channel;
+    if (!name) return;
+    if (isSub(name)) {
+      state.subscriptions = state.subscriptions.filter((s) => s.toLowerCase() !== name.toLowerCase());
+      toast("Unsubscribed from " + name);
+    } else { state.subscriptions.push(name); toast("Subscribed to " + name); }
+    store.set("yt_subs", state.subscriptions);
+    updateSub();
+  };
   els.shareBtn.onclick = () => {
     if (!state.current) return;
     const url = "https://youtu.be/" + state.current.id;
@@ -363,6 +394,49 @@
     P.errMsg.textContent = msg;
     P.err.hidden = false;
   }
+  const streamCache = new Map();
+  async function getStreamUrl(id) {
+    if (streamCache.has(id)) return streamCache.get(id);
+    const r = await fetch(STREAM + "?url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + id));
+    const d = await r.json();
+    if (!d || !d.downloadUrl) throw new Error("no stream");
+    streamCache.set(id, d.downloadUrl);
+    return d.downloadUrl;
+  }
+  let downloading = false;
+  els.downloadBtn.onclick = async () => {
+    const v = state.current;
+    if (!v || downloading) return;
+    downloading = true; els.downloadBtn.disabled = true; els.downloadText.textContent = "Preparing\u2026";
+    const name = ((v.title || "video").replace(/[\\/:*?"<>|]+/g, "").trim().slice(0, 100) || "video") + ".mp4";
+    const link = (href, newTab) => {
+      const a = document.createElement("a");
+      a.href = href; a.download = name;
+      if (newTab) { a.target = "_blank"; a.rel = "noopener"; }
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+    try {
+      const url = await getStreamUrl(v.id);
+      try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(r.status);
+        const total = +r.headers.get("content-length") || 0;
+        const reader = r.body.getReader(), chunks = [];
+        let got = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value); got += value.length;
+          els.downloadText.textContent = total ? "Downloading " + Math.round((got / total) * 100) + "%" : "Downloading\u2026";
+        }
+        const blobUrl = URL.createObjectURL(new Blob(chunks, { type: r.headers.get("content-type") || "video/mp4" }));
+        link(blobUrl);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      } catch { link(url, true); } // blocked by CORS: let the browser handle the file directly
+      toast("Download started");
+    } catch { toast("Couldn't get a download link for this video."); }
+    finally { downloading = false; els.downloadBtn.disabled = false; els.downloadText.textContent = "Download"; }
+  };
   async function setMode(mode) {
     state.mode = mode;
     const v = state.current;
@@ -376,11 +450,9 @@
     const t = ++state.playToken;
     P.err.hidden = true; P.box.classList.add("busy");
     try {
-      const r = await fetch(STREAM + "?url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + v.id));
-      const d = await r.json();
+      const url = await getStreamUrl(v.id);
       if (t !== state.playToken) return;
-      if (!d || !d.downloadUrl) throw new Error("no stream");
-      V.src = d.downloadUrl;
+      V.src = url;
       V.play().catch(() => {});
     } catch {
       if (t === state.playToken) playerError("Couldn't load the ad-less stream for this video.");
