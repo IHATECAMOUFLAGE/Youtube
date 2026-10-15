@@ -1,19 +1,61 @@
 import express from "express";
 import fetch from "node-fetch";
+import { Innertube } from "youtubei.js";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
+let innertubePromise;
+
+function getInnertube() {
+  if (!innertubePromise) {
+    innertubePromise = Innertube.create();
+  }
+  return innertubePromise;
+}
+
+app.get("/api/search", async (req, res) => {
+  const query = req.query.query;
+
+  if (!query) {
+    return res.status(400).json({ results: [] });
+  }
+
+  try {
+    const innertube = await getInnertube();
+    const search = await innertube.search(String(query));
+    const results = search.results
+      .filter((video) => video.video_id)
+      .map((video) => ({
+        id: video.video_id,
+        title: video.title?.toString() || "",
+        thumbnail:
+          video.best_thumbnail?.url ||
+          video.thumbnails?.[0]?.url ||
+          `https://i.ytimg.com/vi/${video.video_id}/mqdefault.jpg`,
+        duration: video.duration?.text || (video.is_live ? "Live" : "unknown"),
+        views:
+          video.short_view_count?.toString() ||
+          video.view_count?.toString() ||
+          "unknown",
+        channel: video.author?.name || "YouTube"
+      }));
+
+    res.status(200).json({ results });
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ results: [] });
+  }
+});
 
 app.get("/api/fetch", async (req, res) => {
   try {
     const targetUrl = req.query.url;
 
     if (!targetUrl) {
-      res.status(400).json({ error: "Missing ?url= parameter" });
-      return;
+      return res.status(400).json({ error: "Missing ?url= parameter" });
     }
 
-    // Construct the AceThinker API URL
     const apiUrl = `https://www.acethinker.ai/downloader/api/dlapinewv2.php?url=${encodeURIComponent(
       targetUrl
     )}`;
@@ -28,23 +70,19 @@ app.get("/api/fetch", async (req, res) => {
     });
 
     if (!apiRes.ok) {
-      res.status(apiRes.status).json({ error: "Failed to fetch from API" });
-      return;
+      return res.status(apiRes.status).json({ error: "Failed to fetch from API" });
     }
 
     const data = await apiRes.json();
     const resData = data?.res_data;
 
     if (!resData || resData.message !== "success") {
-      res.status(404).json({ error: "Video not found or extraction failed", raw: data });
-      return;
+      return res.status(404).json({ error: "Video not found or extraction failed", raw: data });
     }
 
-    // Locate the 360p format (which includes combined audio & video)
     const formats = resData.formats || [];
     let selectedFormat = formats.find((f) => f.quality === "360p");
 
-    // Fallback: If 360p isn't found, find the first format that has an audio codec
     if (!selectedFormat) {
       selectedFormat = formats.find(
         (f) => f.acodec && f.acodec !== "none"
@@ -52,11 +90,9 @@ app.get("/api/fetch", async (req, res) => {
     }
 
     if (!selectedFormat) {
-      res.status(404).json({ error: "No suitable video format with audio found" });
-      return;
+      return res.status(404).json({ error: "No suitable video format with audio found" });
     }
 
-    // Return the response with video details and direct download URL
     res.setHeader("Content-Type", "application/json");
     res.json({
       title: resData.title,
@@ -67,6 +103,7 @@ app.get("/api/fetch", async (req, res) => {
       ext: selectedFormat.ext
     });
   } catch (err) {
+    console.error("Fetch error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 });

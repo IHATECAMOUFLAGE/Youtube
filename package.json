@@ -5,6 +5,9 @@
   "engines": {
     "node": "24.x"
   },
+  "scripts": {
+    "start": "node ./api/server.js"
+  },
   "dependencies": {
     "express": "^4.22.1",
     "node-fetch": "^3.3.2",
