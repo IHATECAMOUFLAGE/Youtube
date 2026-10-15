@@ -151,3 +151,6 @@ body.mobile-sidebar-open .backdrop{opacity:1;pointer-events:auto}
 .pill-btn.sub.subscribed{background:var(--chip);color:var(--text)}
 .pill-btn:disabled{opacity:.7;cursor:progress}
 #subList{margin-bottom:16px}
+
+.fresh-btn{position:fixed;top:68px;left:50%;transform:translateX(-50%);z-index:95;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 16px;font-size:14px;font-weight:500;background:var(--accent);color:#0f0f0f;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+.fresh-btn .material-symbols-rounded{font-size:18px}

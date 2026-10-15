@@ -12,13 +12,13 @@
     liked: store.get("yt_liked"), history: store.get("yt_history"),
     subscriptions: store.get("yt_subs"),
     topics: ["Music", "Gaming", "News", "Live", "Vlogs", "Programming", "Cooking", "Podcasts", "Tech", "Movies"],
-    topicIdx: 0, feed: false, loadingMore: false, token: 0, playToken: 0
+    used: new Set(), feed: false, loadingMore: false, token: 0, playToken: 0
   };
   const els = {};
   ["searchInput", "autocomplete", "backdrop", "searchButton", "mainSection", "shortsSection", "watchLayout", "resultsGrid",
     "shortsGrid", "shortsStatus", "mainPlayer", "pageTitle", "homeLogo", "toast", "likeBtn", "likeText", "shareBtn", "status",
     "watchTitle", "watchChannelName", "watchChannelAvatar", "watchViews", "watchDescription", "relatedList", "embedYoutube",
-    "embedTheta", "subBtn", "downloadBtn", "downloadText", "subList", "sidebar", "menuToggle", "notificationBtn", "accountBtn", "sentinel", "moreLoader", "chipsRow"
+    "embedTheta", "freshBtn", "subBtn", "downloadBtn", "downloadText", "subList", "sidebar", "menuToggle", "notificationBtn", "accountBtn", "sentinel", "moreLoader", "chipsRow"
   ].forEach((id) => (els[id] = $(id)));
   const chips = document.querySelectorAll(".chip");
   const sidebarItems = document.querySelectorAll(".sidebar-item");
@@ -124,22 +124,56 @@
   }
 
   /* ---------- data ---------- */
-  const cache = new Map();
-  async function search(q) {
-    if (cache.has(q)) return cache.get(q);
+  const cache = new Map(), TTL = 5 * 60 * 1000;
+  async function search(q, fresh = false) {
+    const c = cache.get(q);
+    if (c && !fresh && Date.now() - c.t < TTL) return c.v;
     const r = await fetch(API + "?query=" + encodeURIComponent(q));
     if (!r.ok) throw new Error(r.status);
-    const res = ((await r.json()).results) || [];
-    cache.set(q, res);
-    return res;
+    const v = ((await r.json()).results) || [];
+    cache.set(q, { v, t: Date.now() });
+    return v;
   }
-  async function fetchMany(queries) {
-    const r = await Promise.allSettled(queries.map(search));
+  // Interleave result lists so no single query dominates, and push already-watched videos to the end.
+  function mix(lists) {
+    const out = [], max = Math.max(0, ...lists.map((l) => l.length));
+    for (let i = 0; i < max; i++) lists.forEach((l) => l[i] && out.push(l[i]));
+    const seen = new Set(state.history.map((v) => v.id));
+    return out.filter((v) => !seen.has(v.id)).concat(out.filter((v) => seen.has(v.id)));
+  }
+  async function fetchMany(queries, { fresh = false, mixed = false } = {}) {
+    const r = await Promise.allSettled(queries.map((q) => search(q, fresh)));
     const ok = r.filter((x) => x.status === "fulfilled").map((x) => x.value);
     if (!ok.length) throw new Error("failed");
-    return ok.flat();
+    return mixed ? mix(ok) : ok.flat();
   }
-  const nextTopics = (n) => Array.from({ length: n }, () => state.topics[state.topicIdx++ % state.topics.length]);
+
+  /* ---------- recommendations ---------- */
+  // Subscribed channels weigh 3, liked channels 1 per liked video (max 2), plus ~25% generic topics for variety.
+  function interestPool() {
+    const w = new Map(), likes = new Map();
+    state.subscriptions.forEach((s) => w.set(s, (w.get(s) || 0) + 3));
+    state.liked.forEach((v) => v.channel && likes.set(v.channel, (likes.get(v.channel) || 0) + 1));
+    likes.forEach((n, c) => w.set(c, (w.get(c) || 0) + Math.min(n, 2)));
+    const pool = [...w].map(([q, weight]) => ({ q, weight, personal: true }));
+    const total = pool.reduce((s, p) => s + p.weight, 0);
+    const tw = total ? total / 3 / state.topics.length : 1;
+    return pool.concat(state.topics.map((q) => ({ q, weight: tw })));
+  }
+  function pickQueries(n, used = state.used) {
+    let pool = interestPool().filter((p) => !used.has(p.q));
+    if (pool.length < n) { used.clear(); pool = interestPool(); }
+    const out = [];
+    while (out.length < n && pool.length) {
+      let r = Math.random() * pool.reduce((s, p) => s + p.weight, 0), i = 0;
+      while (i < pool.length - 1 && (r -= pool[i].weight) > 0) i++;
+      const [p] = pool.splice(i, 1);
+      used.add(p.q);
+      const tweak = ["latest", "new", "popular"][Math.floor(Math.random() * 3)];
+      out.push(p.personal && Math.random() < 0.5 ? p.q + " " + tweak : p.q);
+    }
+    return out;
+  }
 
   /* ---------- rendering ---------- */
   function card(v) {
@@ -171,7 +205,7 @@
     state.feed = infinite; state.results = [];
     setTitle(title); setStatus(els.status); skeleton();
     try {
-      const items = dedupe(await fetchMany(queries));
+      const items = dedupe(await fetchMany(queries, { mixed: infinite || queries.length > 1 }));
       if (t !== state.token) return;
       state.results = items;
       els.resultsGrid.replaceChildren();
@@ -188,7 +222,7 @@
     state.loadingMore = true; els.moreLoader.hidden = false;
     const t = state.token;
     try {
-      const items = dedupe(await fetchMany(nextTopics(1)), state.results);
+      const items = dedupe(await fetchMany(pickQueries(1), { mixed: true }), state.results);
       if (t !== state.token) return;
       state.results.push(...items);
       renderGrid(items);
@@ -260,11 +294,12 @@
     els.shortsSection.hidden = tab !== "shorts";
     els.chipsRow.hidden = tab !== "home";
     els.subList.hidden = true;
+    pending = null; syncFresh();
     if (tab === "home") {
       state.query = query;
       chips.forEach((c) => c.classList.toggle("active", (c.dataset.query || "") === query));
       if (query) loadFeed([query]);
-      else { state.topicIdx = 0; loadFeed(nextTopics(3), { infinite: true }); }
+      else { state.used = new Set(); loadFeed(pickQueries(4), { infinite: true }); }
     } else if (tab === "search") {
       state.query = query; els.searchInput.value = query;
       loadFeed([query], { title: "Results for \u201C" + query + "\u201D" });
@@ -283,6 +318,39 @@
     switchTab(i.dataset.page);
   }));
 
+  /* ---------- periodic fresh content ---------- */
+  const REFRESH_MS = 5 * 60 * 1000;
+  let pending = null, lastCheck = Date.now();
+  const homeIdle = () => state.tab === "home" && !state.query && state.feed && els.watchLayout.hidden && !document.hidden;
+  const syncFresh = () => { els.freshBtn.hidden = !(pending && homeIdle()); };
+  async function prefetchFresh() {
+    lastCheck = Date.now();
+    if (!homeIdle() || pending) return;
+    const t = state.token;
+    try {
+      const items = dedupe(await fetchMany(pickQueries(4, new Set()), { fresh: true, mixed: true }));
+      if (t !== state.token) return;
+      const known = new Set(state.results.map((v) => v.id));
+      const fresh = items.filter((v) => !known.has(v.id));
+      if (fresh.length >= 4) { pending = fresh; syncFresh(); }
+    } catch {}
+  }
+  els.freshBtn.onclick = () => {
+    if (!pending) return;
+    state.token++;
+    state.results = pending; pending = null;
+    state.used = new Set();
+    els.resultsGrid.replaceChildren();
+    renderGrid(state.results);
+    syncFresh();
+    scrollTo({ top: 0, behavior: "smooth" });
+  };
+  setInterval(prefetchFresh, REFRESH_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - lastCheck > REFRESH_MS) prefetchFresh();
+    syncFresh();
+  });
+
   /* ---------- watch page ---------- */
   function openWatch(v) {
     if (els.watchLayout.hidden) history.pushState({ w: 1 }, "");
@@ -298,6 +366,7 @@
     els.watchDescription.textContent = "Playing: " + (v.title || "") + " \u2022 Channel: " + (v.channel || "YouTube");
     els.mainSection.hidden = els.shortsSection.hidden = els.chipsRow.hidden = true;
     els.watchLayout.hidden = false;
+    syncFresh();
     document.title = (v.title || "Watch") + " - YouTube";
     renderRelated();
     updateLike();
@@ -311,6 +380,7 @@
     (state.tab === "shorts" ? els.shortsSection : els.mainSection).hidden = false;
     els.chipsRow.hidden = state.tab !== "home";
     document.title = "YouTube";
+    syncFresh();
   }
   addEventListener("popstate", () => { if (!els.watchLayout.hidden) closeWatch(); });
   function renderRelated() {
